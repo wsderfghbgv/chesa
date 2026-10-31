@@ -1,0 +1,12 @@
+{
+  "name": "Chess Coach AI · Entrenador con Stockfish 19",
+  "short_name": "Chess Coach",
+  "description": "Juega ajedrez contra Stockfish 19 y aprende con un profesor virtual que explica cada jugada sin necesidad de coordenadas.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1120",
+  "theme_color": "#10b981",
+  "lang": "es"
+}
+
