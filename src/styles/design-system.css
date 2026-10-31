@@ -1,0 +1,1325 @@
+/* =============================================================================
+ * Chess Coach AI · Design System v2
+ * -----------------------------------------------------------------------------
+ * Capa visual premium que se carga DESPUÉS de app.css.
+ * - Solo afecta a la presentación (colores, tipografía, profundidad, movimiento).
+ * - No modifica la geometría responsive del layout definida en app.css.
+ * - Nunca aplica `transform` a <square>/<piece> de Chessground (usan transform
+ *   inline para posicionarse); las animaciones del tablero usan opacity/filter/
+ *   box-shadow.
+ * - Respeta `prefers-reduced-motion`.
+ * ========================================================================== */
+
+/* ---------------------------------------------------------------------------
+ * 1. Tokens
+ * ------------------------------------------------------------------------- */
+:root,
+[data-theme='dark'] {
+  /* Superficies: grafito azulado profundo */
+  --bg-app: #0b0f17;
+  --bg-surface: rgba(20, 26, 38, 0.78);
+  --bg-surface-solid: #141a26;
+  --bg-elevated: rgba(34, 43, 60, 0.72);
+  --bg-subtle: rgba(15, 20, 30, 0.7);
+  --bg-header: rgba(11, 15, 23, 0.72);
+
+  --border-color: rgba(148, 163, 184, 0.13);
+  --border-highlight: rgba(148, 163, 184, 0.26);
+  --border-glow: rgba(52, 211, 153, 0.35);
+
+  --text-main: #eef2f7;
+  --text-muted: #8f9bb0;
+  --text-faint: #64708a;
+
+  /* Acento esmeralda + dorado de apoyo */
+  --accent: #34d399;
+  --accent-hover: #10b981;
+  --accent-strong: #059669;
+  --accent-glow: rgba(52, 211, 153, 0.3);
+  --accent-soft: rgba(52, 211, 153, 0.12);
+  --gold: #fbbf24;
+  --gold-soft: rgba(251, 191, 36, 0.14);
+  --secondary: #60a5fa;
+  --secondary-soft: rgba(96, 165, 250, 0.14);
+  --warn: #f59e0b;
+  --danger: #f43f5e;
+  --danger-soft: rgba(244, 63, 94, 0.14);
+
+  --gradient-accent: linear-gradient(135deg, #34d399 0%, #10b981 55%, #059669 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.035) 0%, rgba(255, 255, 255, 0) 60%);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 10px 30px -10px rgba(0, 0, 0, 0.6), 0 2px 8px -2px rgba(0, 0, 0, 0.35);
+  --shadow-elevated: 0 1px 0 rgba(255, 255, 255, 0.05) inset, 0 28px 60px -18px rgba(0, 0, 0, 0.75), 0 8px 20px -6px rgba(0, 0, 0, 0.4);
+  --shadow-board: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 30px 70px -20px rgba(0, 0, 0, 0.85), 0 12px 28px -10px rgba(0, 0, 0, 0.55);
+
+  /* Radios, ritmo y tipografía */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+  --radius-pill: 999px;
+
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Movimiento */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --dur-fast: 140ms;
+  --dur-base: 220ms;
+  --dur-slow: 380ms;
+
+  --focus-ring: 0 0 0 2px var(--bg-app), 0 0 0 4px var(--accent);
+  color-scheme: dark;
+}
+
+[data-theme='light'] {
+  --bg-app: #f3f5f9;
+  --bg-surface: rgba(255, 255, 255, 0.86);
+  --bg-surface-solid: #ffffff;
+  --bg-elevated: rgba(241, 244, 249, 0.95);
+  --bg-subtle: rgba(232, 236, 243, 0.75);
+  --bg-header: rgba(255, 255, 255, 0.78);
+
+  --border-color: rgba(15, 23, 42, 0.09);
+  --border-highlight: rgba(15, 23, 42, 0.18);
+  --border-glow: rgba(5, 150, 105, 0.35);
+
+  --text-main: #0f172a;
+  --text-muted: #526079;
+  --text-faint: #8391a7;
+
+  --accent: #059669;
+  --accent-hover: #047857;
+  --accent-strong: #065f46;
+  --accent-glow: rgba(5, 150, 105, 0.25);
+  --accent-soft: rgba(5, 150, 105, 0.1);
+  --gold: #d97706;
+  --gold-soft: rgba(217, 119, 6, 0.12);
+  --secondary: #2563eb;
+  --secondary-soft: rgba(37, 99, 235, 0.1);
+  --warn: #d97706;
+  --danger: #e11d48;
+  --danger-soft: rgba(225, 29, 72, 0.1);
+
+  --gradient-accent: linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%);
+  --gradient-surface: linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0) 70%);
+
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.06);
+  --shadow-card: 0 1px 0 rgba(255, 255, 255, 0.9) inset, 0 8px 24px -10px rgba(15, 23, 42, 0.14), 0 2px 6px -2px rgba(15, 23, 42, 0.06);
+  --shadow-elevated: 0 24px 50px -16px rgba(15, 23, 42, 0.22), 0 8px 18px -8px rgba(15, 23, 42, 0.1);
+  --shadow-board: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 26px 56px -20px rgba(15, 23, 42, 0.35), 0 10px 22px -10px rgba(15, 23, 42, 0.18);
+  color-scheme: light;
+}
+
+/* ---------------------------------------------------------------------------
+ * 2. Base: tipografía, fondo ambiental, selección y scrollbars
+ * ------------------------------------------------------------------------- */
+body {
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv11', 'ss01', 'ss03';
+  letter-spacing: -0.006em;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4, h5 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+  color: var(--text-main);
+}
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--text-main);
+}
+
+.app-shell {
+  position: relative;
+  isolation: isolate;
+  background-image: none;
+}
+
+/* Halo ambiental fijo (sin coste de repintado al hacer scroll) */
+.app-shell::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(52, 211, 153, 0.09), transparent 60%),
+    radial-gradient(50rem 36rem at 105% 0%, rgba(96, 165, 250, 0.08), transparent 60%),
+    radial-gradient(40rem 30rem at 50% 110%, rgba(251, 191, 36, 0.04), transparent 60%);
+}
+
+[data-theme='light'] .app-shell::before {
+  background:
+    radial-gradient(60rem 40rem at 12% -10%, rgba(16, 185, 129, 0.1), transparent 60%),
+    radial-gradient(50rem 36rem at 105% 0%, rgba(59, 130, 246, 0.08), transparent 60%);
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-highlight) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--border-highlight);
+  border-radius: var(--radius-pill);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* ---------------------------------------------------------------------------
+ * 3. Cabecera
+ * ------------------------------------------------------------------------- */
+.top-header {
+  background-color: var(--bg-header);
+  backdrop-filter: saturate(160%) blur(18px);
+  -webkit-backdrop-filter: saturate(160%) blur(18px);
+  border-bottom: 1px solid transparent;
+  box-shadow: none;
+  transition:
+    background-color var(--dur-base) var(--ease-standard),
+    border-color var(--dur-base) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard),
+    padding var(--dur-base) var(--ease-standard);
+  animation: dsSlideDown 520ms var(--ease-out-expo) both;
+}
+
+.top-header--scrolled {
+  border-bottom-color: var(--border-color);
+  box-shadow: 0 10px 30px -18px rgba(0, 0, 0, 0.7);
+}
+
+.brand-logo {
+  background: var(--gradient-accent);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 20px -6px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.brand-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  background: linear-gradient(90deg, var(--text-main) 0%, var(--text-main) 60%, var(--accent) 140%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.engine-badge {
+  border-radius: var(--radius-pill);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.01em;
+}
+
+.engine-badge--ready {
+  color: var(--accent);
+  border-color: rgba(52, 211, 153, 0.28);
+  background-color: var(--accent-soft);
+}
+
+.engine-badge--thinking,
+.engine-badge--loading {
+  color: var(--warn);
+  border-color: rgba(245, 158, 11, 0.3);
+  background-color: rgba(245, 158, 11, 0.1);
+}
+
+.engine-badge--error {
+  color: var(--danger);
+  border-color: rgba(244, 63, 94, 0.3);
+  background-color: var(--danger-soft);
+}
+
+.engine-badge__dot {
+  position: relative;
+}
+
+.engine-badge--ready .engine-badge__dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  opacity: 0;
+  animation: dsPing 2.4s var(--ease-out-expo) infinite;
+}
+
+.header-select-group {
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  transition: border-color var(--dur-fast) ease, background-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+.header-select-group:hover {
+  border-color: var(--border-highlight);
+}
+
+.header-select-group:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.header-select-group select {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.turn-pill {
+  border-radius: var(--radius-pill);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  box-shadow: var(--shadow-xs);
+  transition: background var(--dur-slow) var(--ease-standard), color var(--dur-slow) var(--ease-standard);
+}
+
+/* ---------------------------------------------------------------------------
+ * 4. Botones
+ * ------------------------------------------------------------------------- */
+.btn {
+  position: relative;
+  overflow: hidden;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  border-radius: var(--radius-sm);
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-base) var(--ease-standard),
+    border-color var(--dur-base) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard),
+    color var(--dur-base) var(--ease-standard),
+    opacity var(--dur-fast) ease;
+}
+
+/* Brillo diagonal en hover */
+.btn::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.22) 50%, transparent 70%);
+  transform: translateX(-120%);
+  transition: transform 620ms var(--ease-out-expo);
+  pointer-events: none;
+}
+
+.btn:hover:not(:disabled)::after {
+  transform: translateX(120%);
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  transition-duration: 80ms;
+}
+
+.btn:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+.btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+  filter: saturate(0.6);
+}
+
+.btn--primary {
+  background: var(--gradient-accent);
+  color: #04130d;
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 6px 16px -6px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+[data-theme='light'] .btn--primary {
+  color: #ffffff;
+}
+
+.btn--primary:hover:not(:disabled) {
+  box-shadow: 0 10px 24px -8px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+  filter: brightness(1.05);
+}
+
+.btn--secondary {
+  background-color: var(--secondary-soft);
+  color: var(--secondary);
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+.btn--secondary:hover:not(:disabled) {
+  background-color: rgba(96, 165, 250, 0.22);
+  border-color: rgba(96, 165, 250, 0.5);
+}
+
+.btn--accent {
+  background-color: var(--gold-soft);
+  color: var(--gold);
+  border-color: rgba(251, 191, 36, 0.3);
+}
+
+.btn--accent:hover:not(:disabled) {
+  background-color: rgba(251, 191, 36, 0.22);
+  border-color: rgba(251, 191, 36, 0.55);
+}
+
+.btn--ghost {
+  background-color: transparent;
+  color: var(--text-muted);
+  border-color: var(--border-color);
+}
+
+.btn--ghost:hover:not(:disabled) {
+  color: var(--text-main);
+  background-color: var(--bg-elevated);
+  border-color: var(--border-highlight);
+}
+
+.btn--danger {
+  background-color: var(--danger-soft);
+  color: var(--danger);
+  border-color: rgba(244, 63, 94, 0.3);
+}
+
+.btn--danger:hover:not(:disabled) {
+  background-color: rgba(244, 63, 94, 0.22);
+  border-color: rgba(244, 63, 94, 0.55);
+}
+
+.icon-btn {
+  border-radius: var(--radius-sm);
+  min-width: 2.1rem;
+  min-height: 2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform var(--dur-fast) var(--ease-spring),
+    background-color var(--dur-base) ease,
+    border-color var(--dur-base) ease,
+    color var(--dur-base) ease;
+}
+
+.icon-btn:hover:not(:disabled) {
+  color: var(--accent);
+  border-color: rgba(52, 211, 153, 0.45);
+  background-color: var(--accent-soft);
+}
+
+/* ---------------------------------------------------------------------------
+ * 5. Tarjetas, paneles, píldoras e inputs
+ * ------------------------------------------------------------------------- */
+.panel-card,
+.history-ribbon-card,
+.board-toolbar,
+.player-bar,
+.coach-mini-bubble,
+.workspace-tabs {
+  background-image: var(--gradient-surface);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: saturate(140%) blur(14px);
+  -webkit-backdrop-filter: saturate(140%) blur(14px);
+}
+
+.panel-card {
+  border-radius: var(--radius-lg);
+  transition:
+    border-color var(--dur-base) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard),
+    transform var(--dur-base) var(--ease-standard);
+}
+
+.panel-card:hover {
+  border-color: var(--border-highlight);
+}
+
+.kpi-card,
+.lab-item-card,
+.level-card,
+.weakness-card,
+.saved-game-row,
+.rec-puzzle-card,
+.coach-comparison-card,
+.visual-move-card,
+.color-stat-box {
+  border-radius: var(--radius-md);
+  transition:
+    transform var(--dur-base) var(--ease-out-expo),
+    border-color var(--dur-base) ease,
+    box-shadow var(--dur-base) ease,
+    background-color var(--dur-base) ease;
+}
+
+.kpi-card:hover,
+.lab-item-card:hover,
+.level-card:hover,
+.weakness-card:hover,
+.rec-puzzle-card:hover,
+.coach-comparison-card:hover,
+.visual-move-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-highlight);
+  box-shadow: 0 14px 30px -16px rgba(0, 0, 0, 0.6);
+}
+
+.kpi-card__value {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.eyebrow {
+  color: var(--accent);
+  letter-spacing: 0.1em;
+  font-size: 0.66rem;
+}
+
+.pill,
+.coach-stat-pill,
+.category-badge,
+.opt-pill {
+  border-radius: var(--radius-pill);
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease, transform var(--dur-fast) var(--ease-spring);
+}
+
+.opt-pill:active {
+  transform: scale(0.96);
+}
+
+.input-text,
+.input-select,
+.text-input,
+.text-area,
+select,
+textarea,
+input[type='text'],
+input[type='number'] {
+  font-family: var(--font-sans);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--dur-fast) ease, box-shadow var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.input-text:focus,
+.input-select:focus,
+.text-input:focus,
+.text-area:focus,
+textarea:focus,
+input[type='text']:focus,
+input[type='number']:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.alert-box,
+.form-error,
+.form-success {
+  border-radius: var(--radius-md);
+  animation: dsFadeUp 280ms var(--ease-out-expo) both;
+}
+
+/* Barra lateral de acento para bloques del profesor */
+.coach-block {
+  position: relative;
+  border-radius: var(--radius-md);
+  animation: dsFadeUp 320ms var(--ease-out-expo) both;
+}
+
+.coach-block:nth-child(2) { animation-delay: 40ms; }
+.coach-block:nth-child(3) { animation-delay: 80ms; }
+.coach-block:nth-child(4) { animation-delay: 120ms; }
+.coach-block:nth-child(5) { animation-delay: 160ms; }
+
+.coach-details-drawer {
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.coach-details-drawer__summary {
+  cursor: pointer;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.coach-details-drawer__summary:hover {
+  background-color: var(--bg-elevated);
+}
+
+.coach-details-drawer[open] .coach-details-drawer__body {
+  animation: dsFadeUp 260ms var(--ease-out-expo) both;
+}
+
+/* ---------------------------------------------------------------------------
+ * 6. Pestañas de secciones
+ * ------------------------------------------------------------------------- */
+.workspace-tabs {
+  border-radius: var(--radius-lg);
+  padding: 0.3rem;
+}
+
+.tab-btn {
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  color: var(--text-muted);
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    color var(--dur-base) var(--ease-standard),
+    background-color var(--dur-base) var(--ease-standard),
+    box-shadow var(--dur-base) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-spring);
+}
+
+.tab-btn:hover {
+  transform: none;
+  color: var(--text-main);
+  background-color: var(--bg-elevated);
+}
+
+.tab-btn--active {
+  background: var(--gradient-accent);
+  color: #04130d !important;
+  box-shadow: 0 6px 18px -8px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  animation: dsTabActivate 360ms var(--ease-spring);
+}
+
+[data-theme='light'] .tab-btn--active {
+  color: #ffffff !important;
+}
+
+.tab-btn__icon {
+  transition: transform var(--dur-base) var(--ease-spring);
+}
+
+.tab-btn:hover .tab-btn__icon,
+.tab-btn--active .tab-btn__icon {
+  transform: scale(1.12);
+}
+
+.tab-dot {
+  background-color: var(--gold);
+  box-shadow: 0 0 0 0 var(--gold);
+  animation: dsDotPulse 2s ease-out infinite;
+}
+
+/* Transición entre secciones */
+.tab-content-area {
+  animation: dsPanelEnter 380ms var(--ease-out-expo) both;
+}
+
+/* ---------------------------------------------------------------------------
+ * 7. Barras de jugador
+ * ------------------------------------------------------------------------- */
+.player-bar {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  transition: border-color var(--dur-slow) var(--ease-standard), box-shadow var(--dur-slow) var(--ease-standard);
+}
+
+/* Línea de acento animada para el jugador con el turno */
+.player-bar::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--gradient-accent);
+  opacity: 0;
+  transform: scaleY(0.2);
+  transform-origin: center;
+  transition: opacity var(--dur-slow) var(--ease-out-expo), transform var(--dur-slow) var(--ease-out-expo);
+}
+
+.player-bar--active-turn {
+  border-color: rgba(52, 211, 153, 0.4);
+  box-shadow: var(--shadow-card), 0 0 0 1px rgba(52, 211, 153, 0.12), 0 10px 28px -14px var(--accent-glow);
+}
+
+.player-bar--active-turn::before {
+  opacity: 1;
+  transform: scaleY(1);
+}
+
+.player-bar__name,
+.player-bar strong {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.piece-badge {
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-xs), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform var(--dur-slow) var(--ease-spring), box-shadow var(--dur-slow) ease;
+}
+
+.player-bar--active-turn .piece-badge {
+  transform: scale(1.06);
+  box-shadow: 0 0 0 2px rgba(52, 211, 153, 0.45), 0 6px 14px -6px var(--accent-glow);
+}
+
+.clock-chip {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  border-radius: var(--radius-sm);
+  letter-spacing: 0.02em;
+  transition: all var(--dur-base) var(--ease-standard);
+}
+
+.clock-chip--active {
+  color: #04130d;
+  background: var(--gradient-accent);
+  border-color: transparent;
+  box-shadow: 0 6px 16px -6px var(--accent-glow);
+}
+
+.thinking-chip {
+  border-radius: var(--radius-pill);
+  position: relative;
+  padding-left: 1.35rem;
+}
+
+.thinking-chip::before {
+  content: '';
+  position: absolute;
+  left: 0.5rem;
+  top: 50%;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-top: -0.25rem;
+  border-radius: 50%;
+  border: 1.5px solid currentColor;
+  border-right-color: transparent;
+  animation: dsSpin 0.8s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+ * 8. Tablero
+ * ------------------------------------------------------------------------- */
+.board-stage {
+  position: relative;
+}
+
+.board-shell {
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: var(--shadow-board);
+  border-radius: var(--radius-md);
+  background-color: #1a2230;
+  transition: box-shadow var(--dur-slow) var(--ease-standard), border-color var(--dur-slow) var(--ease-standard);
+  animation: dsBoardEnter 620ms var(--ease-out-expo) both;
+}
+
+[data-theme='light'] .board-shell {
+  border-color: rgba(15, 23, 42, 0.08);
+  background-color: #e2e8f0;
+}
+
+/* Biselado interior sutil sobre el tablero (no intercepta eventos) */
+.board-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 7;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), inset 0 2px 0 rgba(255, 255, 255, 0.06), inset 0 -10px 24px -16px rgba(0, 0, 0, 0.45);
+}
+
+.board-shell--variant {
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px var(--secondary-soft), var(--shadow-board);
+}
+
+/* Coordenadas: tipografía nítida con contraste por casilla */
+.board-shell .cg-wrap coords {
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: clamp(0.55rem, 1.4vw, 0.7rem);
+  opacity: 0.92;
+  text-transform: lowercase;
+}
+
+/* Piezas: volumen, elevación al arrastrar y animación de movimiento */
+.cg-wrap piece {
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.32)) drop-shadow(0 6px 8px rgba(0, 0, 0, 0.12));
+  transition: filter var(--dur-base) var(--ease-standard), opacity var(--dur-base) ease;
+}
+
+.cg-wrap.manipulable cg-board piece {
+  cursor: grab;
+}
+
+.cg-wrap piece.anim {
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.38)) drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+
+.cg-wrap piece.dragging {
+  cursor: grabbing;
+  filter: drop-shadow(0 18px 20px rgba(0, 0, 0, 0.5)) drop-shadow(0 4px 6px rgba(0, 0, 0, 0.35)) brightness(1.06);
+}
+
+/* Pieza capturada: se desvanece suavemente */
+.cg-wrap piece.fading {
+  opacity: 0.35;
+  filter: grayscale(0.6) blur(0.5px);
+}
+
+.cg-wrap piece.ghost {
+  opacity: 0.28;
+  filter: grayscale(0.4);
+}
+
+/* Selección: halo luminoso pulsante */
+cg-board square.selected {
+  background-color: rgba(52, 211, 153, 0.42) !important;
+  box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7), inset 0 0 22px rgba(16, 185, 129, 0.55);
+  animation: dsSelectGlow 1.8s ease-in-out infinite;
+}
+
+/* Última jugada: tinte cálido sin perder legibilidad */
+cg-board square.last-move {
+  background-color: rgba(253, 224, 71, 0.36) !important;
+  box-shadow: inset 0 0 0 1px rgba(234, 179, 8, 0.35);
+}
+
+/* Movimientos legales: punto central con aparición progresiva */
+cg-board square.move-dest {
+  background: radial-gradient(circle, rgba(10, 20, 30, 0.38) 0 19%, rgba(10, 20, 30, 0.14) 20% 23%, transparent 24%) !important;
+  animation: dsDestIn 180ms var(--ease-out-expo) both;
+  cursor: pointer;
+}
+
+cg-board square.move-dest:hover {
+  background: radial-gradient(circle, rgba(52, 211, 153, 0.55) 0 26%, rgba(52, 211, 153, 0.18) 27% 100%) !important;
+}
+
+/* Capturas posibles: anillo en esquinas, estilo plataformas modernas */
+cg-board square.oc.move-dest {
+  background:
+    radial-gradient(circle, transparent 0 72%, rgba(244, 63, 94, 0.62) 73% 100%) !important;
+  border-radius: 0;
+}
+
+cg-board square.oc.move-dest:hover {
+  background:
+    radial-gradient(circle, rgba(244, 63, 94, 0.28) 0 70%, rgba(244, 63, 94, 0.85) 71% 100%) !important;
+}
+
+/* Premovimientos */
+cg-board square.current-premove {
+  background-color: rgba(96, 165, 250, 0.38) !important;
+}
+
+cg-board square.premove-dest {
+  background: radial-gradient(circle, rgba(96, 165, 250, 0.5) 0 20%, transparent 21%) !important;
+}
+
+/* Jaque: resplandor radial carmesí (sin transform) */
+cg-board square.check {
+  background: radial-gradient(ellipse at center, rgba(255, 60, 80, 0.95) 0%, rgba(225, 29, 72, 0.7) 40%, rgba(159, 18, 57, 0.15) 80%, transparent 100%) !important;
+  animation: dsCheckPulse 1.2s ease-in-out infinite;
+}
+
+cg-board square.vulnerable-sq {
+  background-color: rgba(244, 63, 94, 0.3) !important;
+  box-shadow: inset 0 0 0 2px rgba(244, 63, 94, 0.85);
+}
+
+cg-board square.checkmate-sq {
+  background-color: rgba(225, 29, 72, 0.7) !important;
+  box-shadow: inset 0 0 22px rgba(76, 5, 25, 0.9);
+}
+
+/* Anillos de impacto (movimiento / captura / jaque) */
+.move-impact-ring--move {
+  border-width: 2px;
+  border-color: rgba(52, 211, 153, 0.8);
+  box-shadow: 0 0 18px rgba(52, 211, 153, 0.45);
+}
+
+.move-impact-ring--capture {
+  border-color: rgba(251, 191, 36, 0.95);
+  background: radial-gradient(circle, rgba(251, 191, 36, 0.4) 0%, transparent 70%);
+  box-shadow: 0 0 26px rgba(251, 191, 36, 0.65);
+}
+
+.move-impact-ring--check {
+  border-color: rgba(244, 63, 94, 0.95);
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.45) 0%, transparent 72%);
+  box-shadow: 0 0 28px rgba(244, 63, 94, 0.8);
+}
+
+/* Flechas del entrenador ligeramente más visibles */
+.cg-wrap .cg-shapes {
+  opacity: 0.72;
+}
+
+/* Estado de carga del motor sobre el tablero */
+.board-loading-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(11, 15, 23, 0.55);
+  backdrop-filter: blur(6px) saturate(120%);
+  -webkit-backdrop-filter: blur(6px) saturate(120%);
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 0.85rem;
+  letter-spacing: 0.01em;
+  pointer-events: none;
+  animation: dsFadeIn 240ms ease both;
+}
+
+.board-loading-overlay__spinner {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.15);
+  border-top-color: var(--accent);
+  animation: dsSpin 0.9s linear infinite;
+}
+
+/* Barra de evaluación */
+.eval-bar {
+  border-radius: var(--radius-sm);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.45), var(--shadow-card);
+}
+
+.eval-bar__white,
+.eval-bar__black {
+  transition: height 650ms var(--ease-out-expo);
+}
+
+.eval-bar__white {
+  background: linear-gradient(180deg, #ffffff 0%, #e6ebf2 100%);
+}
+
+.eval-bar__score {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.eval-bar::after {
+  background-color: var(--accent);
+  opacity: 0.55;
+  height: 1px;
+}
+
+/* ---------------------------------------------------------------------------
+ * 9. Barra de controles, historial y burbuja del profesor
+ * ------------------------------------------------------------------------- */
+.board-toolbar {
+  border-radius: var(--radius-md);
+}
+
+.board-toolbar__ply {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  min-width: 3.2rem;
+  text-align: center;
+}
+
+.history-ribbon-card {
+  border-radius: var(--radius-md);
+}
+
+.move-inline-btn {
+  border-radius: var(--radius-xs);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  transition: background-color var(--dur-fast) ease, color var(--dur-fast) ease, box-shadow var(--dur-fast) ease;
+}
+
+.move-inline-btn--active {
+  background-color: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.4);
+}
+
+.history-pair-chip {
+  animation: dsFadeIn 260ms ease both;
+}
+
+.coach-mini-bubble {
+  border-radius: var(--radius-md);
+  animation: dsFadeUp 360ms var(--ease-out-expo) both;
+}
+
+.coach-mini-bubble__avatar {
+  background: var(--gradient-accent);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 16px -6px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.coach-mini-bubble__badge {
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+  animation: dsBadgePop 420ms var(--ease-spring) both;
+}
+
+.coach-mini-bubble--pause {
+  border-color: rgba(245, 158, 11, 0.6);
+  box-shadow: var(--shadow-card), 0 0 0 1px rgba(245, 158, 11, 0.18), 0 12px 30px -14px rgba(245, 158, 11, 0.45);
+}
+
+.variant-banner {
+  border-radius: var(--radius-md);
+  animation: dsFadeUp 300ms var(--ease-out-expo) both;
+}
+
+.var-chip {
+  font-family: var(--font-mono);
+  transition: background-color var(--dur-fast) ease, border-color var(--dur-fast) ease, color var(--dur-fast) ease;
+}
+
+.analyzing-strip,
+.teaching-pause-banner,
+.verification-challenge-banner,
+.equally-good-banner {
+  border-radius: var(--radius-md);
+  animation: dsFadeUp 320ms var(--ease-out-expo) both;
+}
+
+.spinner-dot {
+  animation: dsSpin 0.9s linear infinite;
+}
+
+/* ---------------------------------------------------------------------------
+ * 10. Modal de promoción
+ * ------------------------------------------------------------------------- */
+.promotion-overlay {
+  background-color: rgba(6, 9, 14, 0.62);
+  backdrop-filter: blur(10px) saturate(130%);
+  -webkit-backdrop-filter: blur(10px) saturate(130%);
+  animation: dsFadeIn 200ms ease both;
+}
+
+.promotion-dialog {
+  border-radius: var(--radius-xl);
+  background-image: var(--gradient-surface);
+  border-color: var(--border-highlight);
+  box-shadow: var(--shadow-elevated);
+  animation: dsModalIn 340ms var(--ease-spring) both;
+}
+
+.promotion-btn {
+  border-radius: var(--radius-md);
+  transition:
+    transform var(--dur-base) var(--ease-spring),
+    border-color var(--dur-base) ease,
+    background-color var(--dur-base) ease,
+    box-shadow var(--dur-base) ease;
+}
+
+.promotion-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -12px var(--accent-glow);
+}
+
+.promotion-btn:nth-child(1) { animation: dsFadeUp 300ms 40ms var(--ease-out-expo) both; }
+.promotion-btn:nth-child(2) { animation: dsFadeUp 300ms 80ms var(--ease-out-expo) both; }
+.promotion-btn:nth-child(3) { animation: dsFadeUp 300ms 120ms var(--ease-out-expo) both; }
+.promotion-btn:nth-child(4) { animation: dsFadeUp 300ms 160ms var(--ease-out-expo) both; }
+
+/* ---------------------------------------------------------------------------
+ * 11. Notificaciones (toasts)
+ * ------------------------------------------------------------------------- */
+.toast-stack {
+  position: fixed;
+  z-index: 200;
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  bottom: max(1rem, env(safe-area-inset-bottom, 0px));
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  width: min(360px, calc(100vw - 2rem));
+  pointer-events: none;
+}
+
+.toast {
+  --toast-color: var(--accent);
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 0.75rem 0.85rem 0.85rem;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-surface-solid);
+  background-image: var(--gradient-surface);
+  border: 1px solid var(--border-highlight);
+  box-shadow: var(--shadow-elevated);
+  color: var(--text-main);
+  pointer-events: auto;
+  animation: dsToastIn 420ms var(--ease-spring) both;
+}
+
+.toast--leaving {
+  animation: dsToastOut 260ms var(--ease-standard) both;
+}
+
+.toast--success { --toast-color: var(--accent); }
+.toast--info { --toast-color: var(--secondary); }
+.toast--warn { --toast-color: var(--warn); }
+.toast--error { --toast-color: var(--danger); }
+
+.toast__icon {
+  flex-shrink: 0;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: #0b0f17;
+  background-color: var(--toast-color);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--toast-color) 18%, transparent);
+}
+
+.toast__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.toast__title {
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.toast__message {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.toast__close {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0.1rem 0.25rem;
+  border-radius: var(--radius-xs);
+  transition: color var(--dur-fast) ease, background-color var(--dur-fast) ease;
+}
+
+.toast__close:hover {
+  color: var(--text-main);
+  background-color: var(--bg-elevated);
+}
+
+.toast__progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background-color: var(--toast-color);
+  transform-origin: left center;
+  animation: dsToastProgress 4200ms linear both;
+  opacity: 0.8;
+}
+
+/* ---------------------------------------------------------------------------
+ * 12. Responsive: refinamientos visuales (sin alterar la geometría)
+ * ------------------------------------------------------------------------- */
+@media (max-width: 860px) {
+  .brand-title {
+    -webkit-text-fill-color: var(--text-main);
+    background: none;
+  }
+
+  .toast-stack {
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 1.5rem);
+  }
+
+  /* En táctil no hay hover real: evitamos estados "pegados" */
+  .kpi-card:hover,
+  .lab-item-card:hover,
+  .level-card:hover,
+  .weakness-card:hover,
+  .rec-puzzle-card:hover,
+  .coach-comparison-card:hover,
+  .visual-move-card:hover {
+    transform: none;
+  }
+}
+
+@media (hover: none) {
+  .btn:hover:not(:disabled) {
+    transform: none;
+  }
+
+  .btn::after {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * 13. Keyframes
+ * ------------------------------------------------------------------------- */
+@keyframes dsFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dsFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dsSlideDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes dsPanelEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Solo opacidad: escalar el contenedor alteraría el cálculo de límites de Chessground */
+@keyframes dsBoardEnter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dsModalIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.94); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dsToastIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes dsToastOut {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to { opacity: 0; transform: translateY(8px) scale(0.97); }
+}
+
+@keyframes dsToastProgress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@keyframes dsTabActivate {
+  0% { box-shadow: 0 0 0 0 var(--accent-glow); }
+  100% { box-shadow: 0 6px 18px -8px var(--accent-glow), 0 0 0 8px transparent; }
+}
+
+@keyframes dsBadgePop {
+  0% { opacity: 0; transform: scale(0.7); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dsSpin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes dsPing {
+  0% { opacity: 0.7; transform: scale(0.6); }
+  80%, 100% { opacity: 0; transform: scale(1.9); }
+}
+
+@keyframes dsDotPulse {
+  0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.6); }
+  70% { box-shadow: 0 0 0 6px rgba(251, 191, 36, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); }
+}
+
+/* Animaciones de casillas: SOLO opacity / filter / box-shadow */
+@keyframes dsDestIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes dsSelectGlow {
+  0%, 100% { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.65), inset 0 0 16px rgba(16, 185, 129, 0.45); }
+  50% { box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.9), inset 0 0 26px rgba(16, 185, 129, 0.75); }
+}
+
+@keyframes dsCheckPulse {
+  0%, 100% { filter: brightness(1) saturate(1); }
+  50% { filter: brightness(1.25) saturate(1.2); }
+}
+
+/* ---------------------------------------------------------------------------
+ * 14. Movimiento reducido
+ * ------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  .btn::after,
+  .engine-badge--ready .engine-badge__dot::after,
+  .toast__progress {
+    display: none !important;
+  }
+
+  .board-shell,
+  .top-header,
+  .tab-content-area,
+  .coach-block,
+  .coach-mini-bubble,
+  .toast {
+    animation: none !important;
+  }
+
+  cg-board square.selected,
+  cg-board square.check,
+  cg-board square.move-dest {
+    animation: none !important;
+  }
+}

@@ -95,7 +95,7 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
       orientation: orientation === 'w' ? 'white' : 'black',
       coordinates: true,
       autoCastle: true,
-      animation: { enabled: !prefersReducedMotion, duration: prefersReducedMotion ? 0 : 220 },
+      animation: { enabled: !prefersReducedMotion, duration: prefersReducedMotion ? 0 : 260 },
       highlight: { lastMove: true, check: true },
       draggable: { enabled: true, showGhost: true },
       selectable: { enabled: true },

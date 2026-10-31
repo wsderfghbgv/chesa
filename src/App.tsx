@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Chess, type Square } from 'chess.js';
 import {
   useChessStore,
@@ -19,6 +19,7 @@ import { AnalysisPanel } from './components/AnalysisPanel';
 import { PostGameReportView } from './components/PostGameReportView';
 import { ProfilePanel } from './components/ProfilePanel';
 import { SettingsPanel } from './components/SettingsPanel';
+import { Toaster } from './components/Toaster';
 
 const EMPTY_SQUARES: Square[] = [];
 
@@ -124,6 +125,23 @@ export const App: React.FC = () => {
     }
   };
 
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(() => {
+        setIsScrolled(window.scrollY > 8);
+        ticking = false;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
   useEffect(() => {
     void initApp();
   }, [initApp]);
@@ -202,8 +220,9 @@ export const App: React.FC = () => {
 
   return (
     <div className="app-shell" data-theme={theme}>
+      <Toaster />
       {/* Cabecera Superior Unificada y Limpia */}
-      <header className="top-header">
+      <header className={`top-header ${isScrolled ? 'top-header--scrolled' : ''}`}>
         <div className="brand-block">
           <div className="brand-logo" aria-hidden="true">♞</div>
           <div>
@@ -352,7 +371,13 @@ export const App: React.FC = () => {
           </div>
 
           {/* Contenedor del tablero + barra de evaluación */}
-          <div className="board-stage">
+          <div className={`board-stage ${engineStatus === 'loading' ? 'board-stage--loading' : ''}`}>
+            {engineStatus === 'loading' && (
+              <div className="board-loading-overlay" role="status" aria-live="polite">
+                <span className="board-loading-overlay__spinner" aria-hidden="true" />
+                <span>Cargando Stockfish 19…</span>
+              </div>
+            )}
             <EvalBar
               score={liveEvaluation}
               orientation={orientation}

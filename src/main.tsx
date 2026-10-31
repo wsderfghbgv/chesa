@@ -4,6 +4,7 @@ import '@lichess-org/chessground/assets/chessground.base.css';
 import '@lichess-org/chessground/assets/chessground.brown.css';
 import '@lichess-org/chessground/assets/chessground.cburnett.css';
 import './styles/app.css';
+import './styles/design-system.css';
 import { App } from './App';
 
 interface ErrorBoundaryProps {
