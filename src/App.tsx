@@ -112,6 +112,24 @@ export const App: React.FC = () => {
   const setAnalysisDepth = useChessStore((s) => s.setAnalysisDepth);
   const playUserMove = useChessStore((s) => s.playUserMove);
   const tickClock = useChessStore((s) => s.tickClock);
+  const retryFromTeachingPause = useChessStore((s) => s.retryFromTeachingPause);
+  const resumeFromTeachingPause = useChessStore((s) => s.resumeFromTeachingPause);
+  const selectPly = useChessStore((s) => s.selectPly);
+
+  const handleSelectTab = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    if (typeof window !== 'undefined' && window.innerWidth <= 860) {
+      setTimeout(() => {
+        document.getElementById('coach-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 40);
+    }
+  };
+
+  const scrollToBoardTop = () => {
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
 
   useEffect(() => {
     void initApp();
@@ -280,6 +298,122 @@ export const App: React.FC = () => {
       <main className={`main-workspace ${focusBoardMode ? 'main-workspace--focus-board' : ''}`}>
         {/* Columna izquierda: Exclusivamente Tablero + Jugadores + Barra de Acción Rápida */}
         <div className="board-column">
+          {/* Cinta compacta de jugadas para móvil estilo Lichess / Chess.com */}
+          <div className="mobile-move-strip" aria-label="Cinta rápida de jugadas">
+            <span className="mobile-move-strip__label">♟</span>
+            <div className="mobile-move-strip__track">
+              {moves.length === 0 ? (
+                <span className="mobile-move-strip__empty">Haz tu primera jugada en el tablero…</span>
+              ) : (
+                moves.map((m) => {
+                  const ev = (mode !== 'no_aid' || gameOver) ? moveEvaluations[m.ply] : undefined;
+                  const isCurrent = viewingPly === m.ply && !variant?.active;
+                  return (
+                    <button
+                      key={m.ply}
+                      type="button"
+                      className={`mobile-move-pill ${isCurrent ? 'mobile-move-pill--active' : ''}`}
+                      onClick={() => void selectPly(m.ply)}
+                    >
+                      {m.color === 'w' && <span className="mobile-move-pill__num">{m.moveNumber}.</span>}
+                      <span>{m.sanEs}</span>
+                      {ev && (
+                        <span
+                          className="mobile-move-pill__badge"
+                          style={{ backgroundColor: ev.classification.meta.color }}
+                        >
+                          {ev.classification.meta.symbol}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Burbuja del Profesor estilo Chess.com Game Review encima del tablero */}
+          {(mode !== 'no_aid' || gameOver) && (
+            <div
+              className={`coach-mini-bubble ${teachingPause?.active ? 'coach-mini-bubble--pause' : ''}`}
+              role="status"
+              aria-live="polite"
+            >
+              <div className="coach-mini-bubble__avatar" aria-hidden="true">🎓</div>
+              <div className="coach-mini-bubble__body">
+                {teachingPause?.active ? (
+                  <>
+                    <div className="coach-mini-bubble__top">
+                      <span
+                        className="coach-mini-bubble__badge"
+                        style={{ backgroundColor: teachingPause.evaluation.classification.meta.color }}
+                      >
+                        {teachingPause.evaluation.classification.meta.symbol}{' '}
+                        {teachingPause.evaluation.classification.meta.label}
+                      </span>
+                      <strong className="coach-mini-bubble__move">
+                        Jugaste {teachingPause.evaluation.playedSanEs} · Mejor era {teachingPause.evaluation.bestSanEs}
+                      </strong>
+                    </div>
+                    <p className="coach-mini-bubble__text">{teachingPause.message}</p>
+                    <div className="coach-mini-bubble__actions">
+                      <button
+                        type="button"
+                        className="btn btn--primary btn--xs"
+                        onClick={() => void retryFromTeachingPause()}
+                      >
+                        ↩ Reintentar jugada
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn--ghost btn--xs"
+                        onClick={() => void resumeFromTeachingPause()}
+                      >
+                        Continuar →
+                      </button>
+                    </div>
+                  </>
+                ) : activeEval ? (
+                  <>
+                    <div className="coach-mini-bubble__top">
+                      <span
+                        className="coach-mini-bubble__badge"
+                        style={{ backgroundColor: activeEval.classification.meta.color }}
+                      >
+                        {activeEval.classification.meta.symbol} {activeEval.classification.meta.label}
+                      </span>
+                      <strong className="coach-mini-bubble__move">
+                        {activeEval.moveNumber}{activeEval.mover === 'w' ? '.' : '...'} {activeEval.playedSanEs}
+                      </strong>
+                      {!activeEval.classification.isTopEngineMove && (
+                        <span className="coach-mini-bubble__best">
+                          Mejor: <b>{activeEval.bestSanEs}</b>
+                        </span>
+                      )}
+                      <button
+                        type="button"
+                        className="coach-mini-bubble__more"
+                        onClick={() => handleSelectTab('coach')}
+                      >
+                        Análisis ↓
+                      </button>
+                    </div>
+                    <p className="coach-mini-bubble__text">{activeEval.whatHappened}</p>
+                  </>
+                ) : (
+                  <div className="coach-mini-bubble__top">
+                    <span className="coach-mini-bubble__badge coach-mini-bubble__badge--ready">
+                      Stockfish 19 Listo
+                    </span>
+                    <span className="coach-mini-bubble__text">
+                      {statusBanner || 'La flecha verde en el tablero te indica la jugada más fuerte.'}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Jugador superior */}
           <div className={`player-bar ${!gameOver && stm === topColor ? 'player-bar--active-turn' : ''}`}>
             <div className="player-bar__info">
@@ -379,51 +513,65 @@ export const App: React.FC = () => {
         </div>
 
         {/* Columna derecha: Navegación + Cinta de Jugadas + Panel Activo */}
-        <div className="coach-column">
+        <div id="coach-section" className="coach-column">
           <nav className="workspace-tabs" aria-label="Secciones del entrenador">
             <button
               type="button"
-              className={`tab-btn ${activeTab === 'coach' ? 'tab-btn--active' : ''}`}
-              onClick={() => setActiveTab('coach')}
+              className="tab-btn tab-btn--mobile-board"
+              onClick={scrollToBoardTop}
             >
-              🎓 Profesor
+              <span className="tab-btn__icon">♟</span>
+              <span className="tab-btn__label">Tablero</span>
+            </button>
+            <button
+              type="button"
+              className={`tab-btn ${activeTab === 'coach' ? 'tab-btn--active' : ''}`}
+              onClick={() => handleSelectTab('coach')}
+            >
+              <span className="tab-btn__icon">🎓</span>
+              <span className="tab-btn__label">Profesor</span>
             </button>
             <button
               type="button"
               className={`tab-btn ${activeTab === 'lab' ? 'tab-btn--active' : ''}`}
-              onClick={() => setActiveTab('lab')}
+              onClick={() => handleSelectTab('lab')}
             >
-              🧪 Laboratorio
+              <span className="tab-btn__icon">🧪</span>
+              <span className="tab-btn__label">Laboratorio</span>
               {personalMistakes.some((m) => !m.mastered) && <span className="tab-dot" />}
             </button>
             <button
               type="button"
               className={`tab-btn ${activeTab === 'analysis' ? 'tab-btn--active' : ''}`}
-              onClick={() => setActiveTab('analysis')}
+              onClick={() => handleSelectTab('analysis')}
             >
-              ⚙ Motor
+              <span className="tab-btn__icon">⚙</span>
+              <span className="tab-btn__label">Motor</span>
             </button>
             <button
               type="button"
               className={`tab-btn ${activeTab === 'report' ? 'tab-btn--active' : ''}`}
-              onClick={() => setActiveTab('report')}
+              onClick={() => handleSelectTab('report')}
             >
-              📊 Informe
+              <span className="tab-btn__icon">📊</span>
+              <span className="tab-btn__label">Informe</span>
               {postGameReport && <span className="tab-dot" />}
             </button>
             <button
               type="button"
               className={`tab-btn ${activeTab === 'profile' ? 'tab-btn--active' : ''}`}
-              onClick={() => setActiveTab('profile')}
+              onClick={() => handleSelectTab('profile')}
             >
-              👤 Perfil ({playerStats.totalGames})
+              <span className="tab-btn__icon">👤</span>
+              <span className="tab-btn__label">Perfil ({playerStats.totalGames})</span>
             </button>
             <button
               type="button"
               className={`tab-btn ${activeTab === 'settings' ? 'tab-btn--active' : ''}`}
-              onClick={() => setActiveTab('settings')}
+              onClick={() => handleSelectTab('settings')}
             >
-              🎚 Niveles
+              <span className="tab-btn__icon">🎚</span>
+              <span className="tab-btn__label">Niveles</span>
             </button>
           </nav>
 
