@@ -224,6 +224,7 @@ export interface ChessStoreState {
   simpleLanguageMode: boolean;
   showSquareLabelsOnBoard: boolean;
   focusBoardMode: boolean;
+  boardTheme: 'emerald' | 'wood' | 'midnight' | 'ocean';
   customHighlightShapes: DrawShape[];
 
   // Modos 3 y 5 (Desafío / Juega la mejor jugada)
@@ -254,6 +255,8 @@ export interface ChessStoreState {
   toggleSimpleLanguageMode: () => void;
   toggleSquareLabelsOnBoard: () => void;
   toggleFocusBoardMode: () => void;
+  setBoardTheme: (theme: 'emerald' | 'wood' | 'midnight' | 'ocean') => void;
+  cycleBoardTheme: () => void;
   setCustomHighlightShapes: (shapes: DrawShape[]) => void;
   toggleSound: () => void;
   toggleVoice: () => void;
@@ -353,6 +356,7 @@ interface PersistedSessionSnapshot {
   simpleLanguageMode: boolean;
   showSquareLabelsOnBoard: boolean;
   focusBoardMode: boolean;
+  boardTheme?: 'emerald' | 'wood' | 'midnight' | 'ocean';
   activeChallenge: ChallengeStatus | null;
   puzzleIndex: number;
   postGameReport: PostGameReport | null;
@@ -439,6 +443,7 @@ export function savePersistedSession(state: ChessStoreState): void {
       simpleLanguageMode: state.simpleLanguageMode,
       showSquareLabelsOnBoard: state.showSquareLabelsOnBoard,
       focusBoardMode: state.focusBoardMode,
+      boardTheme: state.boardTheme,
       activeChallenge: state.activeChallenge,
       puzzleIndex: state.puzzleIndex,
       postGameReport: state.postGameReport,
@@ -535,6 +540,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   simpleLanguageMode: restoredSession.simpleLanguageMode ?? true,
   showSquareLabelsOnBoard: restoredSession.showSquareLabelsOnBoard ?? true,
   focusBoardMode: restoredSession.focusBoardMode ?? false,
+  boardTheme: restoredSession.boardTheme ?? 'emerald',
   customHighlightShapes: [],
 
   activeChallenge: restoredSession.activeChallenge ?? null,
@@ -654,6 +660,15 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     set((s) => ({ showSquareLabelsOnBoard: !s.showSquareLabelsOnBoard })),
 
   toggleFocusBoardMode: () => set((s) => ({ focusBoardMode: !s.focusBoardMode })),
+
+  setBoardTheme: (boardTheme) => set({ boardTheme }),
+
+  cycleBoardTheme: () => {
+    const order: Array<'emerald' | 'wood' | 'midnight' | 'ocean'> = ['emerald', 'wood', 'midnight', 'ocean'];
+    const cur = get().boardTheme;
+    const next = order[(order.indexOf(cur) + 1) % order.length] ?? 'emerald';
+    set({ boardTheme: next });
+  },
 
   setCustomHighlightShapes: (shapes) => set({ customHighlightShapes: shapes }),
 

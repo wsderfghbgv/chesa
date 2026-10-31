@@ -10,13 +10,28 @@ export const SettingsPanel: React.FC = () => {
   const clockEnabled = useChessStore((s) => s.clockEnabled);
   const clockInitialMinutes = useChessStore((s) => s.clockInitialMinutes);
   const clockIncrementSeconds = useChessStore((s) => s.clockIncrementSeconds);
+  const boardTheme = useChessStore((s) => s.boardTheme);
 
   const setOpponentLevel = useChessStore((s) => s.setOpponentLevel);
   const setAnalysisDepth = useChessStore((s) => s.setAnalysisDepth);
   const setThresholds = useChessStore((s) => s.setThresholds);
   const setClockConfig = useChessStore((s) => s.setClockConfig);
+  const setBoardTheme = useChessStore((s) => s.setBoardTheme);
 
   const currentLevel = getLevel(opponentLevelId);
+
+  const boardThemes: Array<{
+    id: 'emerald' | 'wood' | 'midnight' | 'ocean';
+    name: string;
+    desc: string;
+    light: string;
+    dark: string;
+  }> = [
+    { id: 'emerald', name: 'Esmeralda Torneo', desc: 'Verde torneo profesional y marfil suave', light: '#eeeed2', dark: '#4b8352' },
+    { id: 'wood', name: 'Madera Clásica', desc: 'Nogal cálido y arce tradicional', light: '#f0d9b5', dark: '#b58863' },
+    { id: 'midnight', name: 'Medianoche Cristal', desc: 'Pizarra moderna de alto contraste', light: '#dce4ef', dark: '#4b648a' },
+    { id: 'ocean', name: 'Océano Ártico', desc: 'Azul glaciar limpio y relajante', light: '#e8f1f5', dark: '#3f7cac' },
+  ];
 
   return (
     <section className="panel-card settings-panel" aria-label="Configuración del motor y criterios">
@@ -182,6 +197,30 @@ export const SettingsPanel: React.FC = () => {
               }
             />
           </label>
+        </div>
+      </div>
+
+      {/* 5. Estilo visual del tablero */}
+      <div className="report-section">
+        <h4>5. Estilo visual del tablero</h4>
+        <div className="levels-grid">
+          {boardThemes.map((bt) => (
+            <button
+              key={bt.id}
+              type="button"
+              className={`level-card ${boardTheme === bt.id ? 'level-card--active' : ''}`}
+              onClick={() => setBoardTheme(bt.id)}
+            >
+              <div className="level-card__top">
+                <strong>{bt.name}</strong>
+                <span className="board-theme-swatch" aria-hidden="true">
+                  <i style={{ backgroundColor: bt.light }} />
+                  <i style={{ backgroundColor: bt.dark }} />
+                </span>
+              </div>
+              <small>{bt.desc}</small>
+            </button>
+          ))}
         </div>
       </div>
     </section>

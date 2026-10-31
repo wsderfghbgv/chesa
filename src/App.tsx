@@ -33,6 +33,7 @@ export const App: React.FC = () => {
   const theme = useChessStore((s) => s.theme);
   const activeTab = useChessStore((s) => s.activeTab);
   const focusBoardMode = useChessStore((s) => s.focusBoardMode);
+  const boardTheme = useChessStore((s) => s.boardTheme);
   const mode = useChessStore((s) => s.mode);
   const playerColor = useChessStore((s) => s.playerColor);
   const orientation = useChessStore((s) => s.orientation);
@@ -280,7 +281,7 @@ export const App: React.FC = () => {
         {/* Columna izquierda: Exclusivamente Tablero + Jugadores + Barra de Acción Rápida */}
         <div className="board-column">
           {/* Jugador superior */}
-          <div className="player-bar">
+          <div className={`player-bar ${!gameOver && stm === topColor ? 'player-bar--active-turn' : ''}`}>
             <div className="player-bar__info">
               <span className={`piece-badge piece-badge--${topColor}`}>
                 {topColor === 'w' ? '♔' : '♚'}
@@ -333,12 +334,13 @@ export const App: React.FC = () => {
               vulnerableSquares={vulnerableSquares}
               isVariantMode={Boolean(variant?.active)}
               showSquareLabels={showSquareLabelsOnBoard}
+              boardTheme={boardTheme}
               onMove={(from, to, promo) => void playUserMove(from, to, promo)}
             />
           </div>
 
           {/* Jugador inferior + Leyenda compacta integrada */}
-          <div className="player-bar">
+          <div className={`player-bar ${!gameOver && stm === bottomColor ? 'player-bar--active-turn' : ''}`}>
             <div className="player-bar__info">
               <span className={`piece-badge piece-badge--${bottomColor}`}>
                 {bottomColor === 'w' ? '♔' : '♚'}
@@ -428,7 +430,7 @@ export const App: React.FC = () => {
           {/* Cinta horizontal de jugadas y gráfico desplegable */}
           <MoveHistoryAndControls />
 
-          <div className="tab-content-area">
+          <div className="tab-content-area" key={activeTab}>
             {activeTab === 'coach' && <CoachPanel />}
             {activeTab === 'lab' && <TrainingLabPanel />}
             {activeTab === 'analysis' && <AnalysisPanel />}

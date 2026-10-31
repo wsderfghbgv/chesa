@@ -15,6 +15,7 @@ export const BoardQuickControls: React.FC = () => {
   const gameOver = useChessStore((s) => s.gameOver);
   const variant = useChessStore((s) => s.variant);
   const focusBoardMode = useChessStore((s) => s.focusBoardMode);
+  const boardTheme = useChessStore((s) => s.boardTheme);
 
   const selectPly = useChessStore((s) => s.selectPly);
   const startNewGame = useChessStore((s) => s.startNewGame);
@@ -25,6 +26,14 @@ export const BoardQuickControls: React.FC = () => {
   const setActiveTab = useChessStore((s) => s.setActiveTab);
   const flipBoard = useChessStore((s) => s.flipBoard);
   const toggleFocusBoardMode = useChessStore((s) => s.toggleFocusBoardMode);
+  const cycleBoardTheme = useChessStore((s) => s.cycleBoardTheme);
+
+  const boardThemeLabel: Record<'emerald' | 'wood' | 'midnight' | 'ocean', string> = {
+    emerald: 'Esmeralda',
+    wood: 'Madera',
+    midnight: 'Medianoche',
+    ocean: 'Océano',
+  };
 
   const canUndo = (mode !== 'no_aid' || gameOver) && moves.length > 0;
 
@@ -106,6 +115,14 @@ export const BoardQuickControls: React.FC = () => {
           title={focusBoardMode ? 'Restaurar vista habitual del tablero' : 'Agrandar tablero para máxima visibilidad'}
         >
           {focusBoardMode ? '🗗 Tablero normal' : '🗖 Agrandar tablero'}
+        </button>
+        <button
+          type="button"
+          className="btn btn--ghost btn--xs"
+          onClick={cycleBoardTheme}
+          title={`Cambiar estilo visual de las casillas del tablero (Actual: ${boardThemeLabel[boardTheme]})`}
+        >
+          🎨 {boardThemeLabel[boardTheme]}
         </button>
         <button
           type="button"

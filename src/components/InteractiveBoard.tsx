@@ -18,7 +18,29 @@ interface InteractiveBoardProps {
   vulnerableSquares?: Square[];
   isVariantMode?: boolean;
   showSquareLabels?: boolean;
+  boardTheme?: 'emerald' | 'wood' | 'midnight' | 'ocean';
   onMove: (from: Square, to: Square, promotion?: PieceSymbol) => void;
+}
+
+function countBoardPieces(fenStr: string): number {
+  const placement = fenStr.split(' ')[0] ?? '';
+  let count = 0;
+  for (let i = 0; i < placement.length; i++) {
+    const ch = placement[i];
+    if (ch && /[prnbqkPRNBQK]/.test(ch)) count++;
+  }
+  return count;
+}
+
+function squareToPercentCoords(sq: Square, orientation: Color): { left: string; top: string } {
+  const fileCode = sq.charCodeAt(0) - 97; // 0..7
+  const rankNum = Number(sq[1]) - 1; // 0..7
+  const col = orientation === 'w' ? fileCode : 7 - fileCode;
+  const row = orientation === 'w' ? 7 - rankNum : rankNum;
+  return {
+    left: `${col * 12.5}%`,
+    top: `${row * 12.5}%`,
+  };
 }
 
 const PROMOTION_PIECES: Array<{ role: PieceSymbol; label: string; symbolW: string; symbolB: string }> = [
@@ -39,12 +61,14 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
   vulnerableSquares = [],
   isVariantMode = false,
   showSquareLabels = true,
+  boardTheme = 'emerald',
   onMove,
 }) => {
   const boardRef = useRef<HTMLDivElement | null>(null);
   const cgRef = useRef<Api | null>(null);
   const onMoveRef = useRef(onMove);
   const fenRef = useRef(fen);
+  const prevPieceCountRef = useRef<number>(countBoardPieces(fen));
   onMoveRef.current = onMove;
   fenRef.current = fen;
 
@@ -54,14 +78,24 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
     color: Color;
   } | null>(null);
 
+  const [moveImpact, setMoveImpact] = useState<{
+    square: Square;
+    kind: 'move' | 'capture' | 'check';
+    id: number;
+  } | null>(null);
+
   useEffect(() => {
     if (!boardRef.current) return;
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const api = Chessground(boardRef.current, {
       fen,
       orientation: orientation === 'w' ? 'white' : 'black',
       coordinates: true,
       autoCastle: true,
-      animation: { enabled: true, duration: 180 },
+      animation: { enabled: !prefersReducedMotion, duration: prefersReducedMotion ? 0 : 220 },
       highlight: { lastMove: true, check: true },
       draggable: { enabled: true, showGhost: true },
       selectable: { enabled: true },
@@ -87,6 +121,21 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
       chess = new Chess(fen);
     } catch {
       return;
+    }
+
+    const currentPieces = countBoardPieces(fen);
+    const wasCapture = currentPieces < prevPieceCountRef.current;
+    prevPieceCountRef.current = currentPieces;
+
+    if (lastMove && lastMove[1]) {
+      const kind: 'move' | 'capture' | 'check' = chess.inCheck()
+        ? 'check'
+        : wasCapture
+          ? 'capture'
+          : 'move';
+      setMoveImpact({ square: lastMove[1], kind, id: Date.now() });
+    } else {
+      setMoveImpact(null);
     }
 
     const stm = chess.turn();
@@ -156,10 +205,22 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
 
   const files = orientation === 'w' ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'];
   const ranks = orientation === 'w' ? ['8', '7', '6', '5', '4', '3', '2', '1'] : ['1', '2', '3', '4', '5', '6', '7', '8'];
+  const impactPos = moveImpact ? squareToPercentCoords(moveImpact.square, orientation) : null;
 
   return (
-    <div className={`board-shell ${isVariantMode ? 'board-shell--variant' : ''}`}>
+    <div
+      className={`board-shell ${isVariantMode ? 'board-shell--variant' : ''}`}
+      data-board-theme={boardTheme}
+    >
       <div ref={boardRef} className="cg-board-host cg-wrap" />
+      {moveImpact && impactPos && (
+        <div
+          key={moveImpact.id}
+          className={`move-impact-ring move-impact-ring--${moveImpact.kind}`}
+          style={{ left: impactPos.left, top: impactPos.top }}
+          aria-hidden="true"
+        />
+      )}
       {showSquareLabels && (
         <div className="square-labels-overlay" aria-hidden="true">
           {ranks.map((r) =>
