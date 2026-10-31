@@ -198,17 +198,41 @@ p {
   color: #f8fafc;
 }
 
-/* Área de trabajo principal: 2 columnas limpias y espaciadas */
+/* Área de trabajo principal: El tablero es el protagonista indiscutible */
 .main-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(310px, min(500px, calc(100vh - 185px))) minmax(350px, 1fr);
-  gap: 1.15rem;
-  padding: 0.75rem 1.15rem 1.25rem;
+  grid-template-columns: minmax(420px, min(780px, calc(100vh - 190px))) minmax(320px, 440px);
+  justify-content: center;
+  gap: 1.25rem;
+  padding: 0.55rem 1rem 1.25rem;
   max-width: 1480px;
   width: 100%;
   margin: 0 auto;
   align-items: start;
+}
+
+/* Modo Tablero Gigante / Enfocado (Prioridad Máxima al Tablero) */
+.main-workspace--focus-board {
+  grid-template-columns: minmax(480px, min(920px, calc(100vh - 165px))) minmax(280px, 360px);
+  max-width: 1540px;
+}
+
+@media (min-width: 900px) {
+  .coach-column {
+    max-height: calc(100vh - 85px);
+    overflow-y: auto;
+    padding-right: 0.25rem;
+    scrollbar-width: thin;
+  }
+}
+
+@media (max-width: 1180px) and (min-width: 721px) {
+  .main-workspace {
+    grid-template-columns: minmax(380px, 1.4fr) minmax(280px, 1fr);
+    gap: 0.85rem;
+    padding: 0.5rem 0.75rem;
+  }
 }
 
 .board-column {
@@ -379,10 +403,10 @@ p {
   position: relative;
   width: 100%;
   aspect-ratio: 1 / 1;
-  border-radius: 0.65rem;
+  border-radius: 0.75rem;
   overflow: hidden;
   border: 2px solid var(--border-color);
-  box-shadow: var(--shadow-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.38);
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -1948,7 +1972,7 @@ cg-board square.checkmate-sq {
     position: relative;
     top: 0;
     max-height: none;
-    max-width: min(100%, 440px);
+    max-width: min(100%, 520px);
     width: 100%;
     margin: 0 auto;
     gap: 0.35rem;

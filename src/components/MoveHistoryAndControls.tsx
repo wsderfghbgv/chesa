@@ -14,6 +14,7 @@ export const BoardQuickControls: React.FC = () => {
   const playerColor = useChessStore((s) => s.playerColor);
   const gameOver = useChessStore((s) => s.gameOver);
   const variant = useChessStore((s) => s.variant);
+  const focusBoardMode = useChessStore((s) => s.focusBoardMode);
 
   const selectPly = useChessStore((s) => s.selectPly);
   const startNewGame = useChessStore((s) => s.startNewGame);
@@ -23,6 +24,7 @@ export const BoardQuickControls: React.FC = () => {
   const finishAndReviewNow = useChessStore((s) => s.finishAndReviewNow);
   const setActiveTab = useChessStore((s) => s.setActiveTab);
   const flipBoard = useChessStore((s) => s.flipBoard);
+  const toggleFocusBoardMode = useChessStore((s) => s.toggleFocusBoardMode);
 
   const canUndo = (mode !== 'no_aid' || gameOver) && moves.length > 0;
 
@@ -96,6 +98,14 @@ export const BoardQuickControls: React.FC = () => {
           title="Girar orientación del tablero"
         >
           ⇅ Girar
+        </button>
+        <button
+          type="button"
+          className={`btn ${focusBoardMode ? 'btn--primary' : 'btn--ghost'} btn--xs`}
+          onClick={toggleFocusBoardMode}
+          title={focusBoardMode ? 'Restaurar vista habitual del tablero' : 'Agrandar tablero para máxima visibilidad'}
+        >
+          {focusBoardMode ? '🗗 Tablero normal' : '🗖 Agrandar tablero'}
         </button>
         <button
           type="button"

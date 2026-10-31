@@ -223,6 +223,7 @@ export interface ChessStoreState {
   showThreatArrows: boolean;
   simpleLanguageMode: boolean;
   showSquareLabelsOnBoard: boolean;
+  focusBoardMode: boolean;
   customHighlightShapes: DrawShape[];
 
   // Modos 3 y 5 (Desafío / Juega la mejor jugada)
@@ -252,6 +253,7 @@ export interface ChessStoreState {
   toggleVisualOption: (opt: 'showVisualAids' | 'showBestMoveArrow' | 'showThreatArrows') => void;
   toggleSimpleLanguageMode: () => void;
   toggleSquareLabelsOnBoard: () => void;
+  toggleFocusBoardMode: () => void;
   setCustomHighlightShapes: (shapes: DrawShape[]) => void;
   toggleSound: () => void;
   toggleVoice: () => void;
@@ -350,6 +352,7 @@ interface PersistedSessionSnapshot {
   showThreatArrows: boolean;
   simpleLanguageMode: boolean;
   showSquareLabelsOnBoard: boolean;
+  focusBoardMode: boolean;
   activeChallenge: ChallengeStatus | null;
   puzzleIndex: number;
   postGameReport: PostGameReport | null;
@@ -435,6 +438,7 @@ export function savePersistedSession(state: ChessStoreState): void {
       showThreatArrows: state.showThreatArrows,
       simpleLanguageMode: state.simpleLanguageMode,
       showSquareLabelsOnBoard: state.showSquareLabelsOnBoard,
+      focusBoardMode: state.focusBoardMode,
       activeChallenge: state.activeChallenge,
       puzzleIndex: state.puzzleIndex,
       postGameReport: state.postGameReport,
@@ -530,6 +534,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   showThreatArrows: restoredSession.showThreatArrows ?? true,
   simpleLanguageMode: restoredSession.simpleLanguageMode ?? true,
   showSquareLabelsOnBoard: restoredSession.showSquareLabelsOnBoard ?? true,
+  focusBoardMode: restoredSession.focusBoardMode ?? false,
   customHighlightShapes: [],
 
   activeChallenge: restoredSession.activeChallenge ?? null,
@@ -647,6 +652,8 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
 
   toggleSquareLabelsOnBoard: () =>
     set((s) => ({ showSquareLabelsOnBoard: !s.showSquareLabelsOnBoard })),
+
+  toggleFocusBoardMode: () => set((s) => ({ focusBoardMode: !s.focusBoardMode })),
 
   setCustomHighlightShapes: (shapes) => set({ customHighlightShapes: shapes }),
 

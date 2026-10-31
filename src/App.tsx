@@ -32,6 +32,7 @@ function formatClock(ms: number): string {
 export const App: React.FC = () => {
   const theme = useChessStore((s) => s.theme);
   const activeTab = useChessStore((s) => s.activeTab);
+  const focusBoardMode = useChessStore((s) => s.focusBoardMode);
   const mode = useChessStore((s) => s.mode);
   const playerColor = useChessStore((s) => s.playerColor);
   const orientation = useChessStore((s) => s.orientation);
@@ -275,7 +276,7 @@ export const App: React.FC = () => {
       </header>
 
       {/* Área principal de 2 columnas bien diferenciadas */}
-      <main className="main-workspace">
+      <main className={`main-workspace ${focusBoardMode ? 'main-workspace--focus-board' : ''}`}>
         {/* Columna izquierda: Exclusivamente Tablero + Jugadores + Barra de Acción Rápida */}
         <div className="board-column">
           {/* Jugador superior */}
