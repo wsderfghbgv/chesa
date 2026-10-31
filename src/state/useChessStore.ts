@@ -538,7 +538,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   showBestMoveArrow: restoredSession.showBestMoveArrow ?? true,
   showThreatArrows: restoredSession.showThreatArrows ?? true,
   simpleLanguageMode: restoredSession.simpleLanguageMode ?? true,
-  showSquareLabelsOnBoard: restoredSession.showSquareLabelsOnBoard ?? true,
+  showSquareLabelsOnBoard: restoredSession.showSquareLabelsOnBoard ?? false,
   focusBoardMode: restoredSession.focusBoardMode ?? false,
   boardTheme: restoredSession.boardTheme ?? 'emerald',
   customHighlightShapes: [],
