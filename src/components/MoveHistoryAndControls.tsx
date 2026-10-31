@@ -98,7 +98,7 @@ export const BoardQuickControls: React.FC = () => {
           onClick={() => void startNewGame({ color: playerColor === 'w' ? 'b' : 'w' })}
           title="Cambiar de color y empezar nueva partida"
         >
-          ⇄ {playerColor === 'w' ? 'Jugar con Negras ♚' : 'Jugar con Blancas ♔'}
+          ⇄ {playerColor === 'w' ? 'Negras ♚' : 'Blancas ♔'}
         </button>
         <button
           type="button"
@@ -114,7 +114,7 @@ export const BoardQuickControls: React.FC = () => {
           onClick={toggleFocusBoardMode}
           title={focusBoardMode ? 'Restaurar vista habitual del tablero' : 'Agrandar tablero para máxima visibilidad'}
         >
-          {focusBoardMode ? '🗗 Tablero normal' : '🗖 Agrandar tablero'}
+          {focusBoardMode ? '🗗 Normal' : '🗖 Grande'}
         </button>
         <button
           type="button"

@@ -114,7 +114,6 @@ export const App: React.FC = () => {
   const tickClock = useChessStore((s) => s.tickClock);
   const retryFromTeachingPause = useChessStore((s) => s.retryFromTeachingPause);
   const resumeFromTeachingPause = useChessStore((s) => s.resumeFromTeachingPause);
-  const selectPly = useChessStore((s) => s.selectPly);
 
   const handleSelectTab = (tab: typeof activeTab) => {
     setActiveTab(tab);
@@ -122,12 +121,6 @@ export const App: React.FC = () => {
       setTimeout(() => {
         document.getElementById('coach-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }, 40);
-    }
-  };
-
-  const scrollToBoardTop = () => {
-    if (typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -190,6 +183,23 @@ export const App: React.FC = () => {
   const topColor = orientation === 'w' ? 'b' : 'w';
   const bottomColor = orientation;
 
+  const topIsPlayer = topColor === playerColor;
+  const bottomIsPlayer = bottomColor === playerColor;
+
+  const topNameFull = topIsPlayer
+    ? `Tú (${playerColor === 'w' ? 'Blancas ♔' : 'Negras ♚'})`
+    : `Entrenador Stockfish (${topColor === 'w' ? 'Blancas ♔' : 'Negras ♚'} · ${currentLevel.name})`;
+  const topNameShort = topIsPlayer
+    ? `Tú (${playerColor === 'w' ? 'Blancas' : 'Negras'})`
+    : `Stockfish Nv.${currentLevel.index}`;
+
+  const bottomNameFull = bottomIsPlayer
+    ? `Tú (${playerColor === 'w' ? 'Blancas ♔' : 'Negras ♚'})`
+    : `Entrenador Stockfish (${bottomColor === 'w' ? 'Blancas ♔' : 'Negras ♚'} · ${currentLevel.name})`;
+  const bottomNameShort = bottomIsPlayer
+    ? `Tú (${playerColor === 'w' ? 'Blancas' : 'Negras'})`
+    : `Stockfish Nv.${currentLevel.index}`;
+
   return (
     <div className="app-shell" data-theme={theme}>
       {/* Cabecera Superior Unificada y Limpia */}
@@ -220,7 +230,7 @@ export const App: React.FC = () => {
         </div>
 
         <div className="header-controls">
-          <label className="header-select-group" title="Elegir si juegas con piezas Blancas o Negras">
+          <label className="header-select-group header-select-group--desktop-only" title="Elegir si juegas con piezas Blancas o Negras">
             <span>Tus piezas</span>
             <select
               value={playerColor}
@@ -232,7 +242,7 @@ export const App: React.FC = () => {
             </select>
           </label>
 
-          <label className="header-select-group">
+          <label className="header-select-group header-select-group--desktop-only">
             <span>Modo</span>
             <select
               value={mode}
@@ -247,7 +257,7 @@ export const App: React.FC = () => {
             </select>
           </label>
 
-          <label className="header-select-group">
+          <label className="header-select-group header-select-group--desktop-only">
             <span>Rival</span>
             <select
               value={opponentLevelId}
@@ -262,7 +272,7 @@ export const App: React.FC = () => {
             </select>
           </label>
 
-          <label className="header-select-group">
+          <label className="header-select-group header-select-group--desktop-only">
             <span>Análisis</span>
             <select
               value={analysisDepth}
@@ -289,7 +299,16 @@ export const App: React.FC = () => {
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label="Cambiar entre tema oscuro y claro"
           >
-            {theme === 'dark' ? '☀ Claro' : '🌙 Oscuro'}
+            {theme === 'dark' ? '☀' : '🌙'}
+          </button>
+
+          <button
+            type="button"
+            className="btn btn--ghost btn--xs header-settings-shortcut"
+            onClick={() => handleSelectTab('settings')}
+            title="Configuración de nivel y modo"
+          >
+            ⚙
           </button>
         </div>
       </header>
@@ -298,41 +317,99 @@ export const App: React.FC = () => {
       <main className={`main-workspace ${focusBoardMode ? 'main-workspace--focus-board' : ''}`}>
         {/* Columna izquierda: Exclusivamente Tablero + Jugadores + Barra de Acción Rápida */}
         <div className="board-column">
-          {/* Cinta compacta de jugadas para móvil estilo Lichess / Chess.com */}
-          <div className="mobile-move-strip" aria-label="Cinta rápida de jugadas">
-            <span className="mobile-move-strip__label">♟</span>
-            <div className="mobile-move-strip__track">
-              {moves.length === 0 ? (
-                <span className="mobile-move-strip__empty">Haz tu primera jugada en el tablero…</span>
-              ) : (
-                moves.map((m) => {
-                  const ev = (mode !== 'no_aid' || gameOver) ? moveEvaluations[m.ply] : undefined;
-                  const isCurrent = viewingPly === m.ply && !variant?.active;
-                  return (
-                    <button
-                      key={m.ply}
-                      type="button"
-                      className={`mobile-move-pill ${isCurrent ? 'mobile-move-pill--active' : ''}`}
-                      onClick={() => void selectPly(m.ply)}
-                    >
-                      {m.color === 'w' && <span className="mobile-move-pill__num">{m.moveNumber}.</span>}
-                      <span>{m.sanEs}</span>
-                      {ev && (
-                        <span
-                          className="mobile-move-pill__badge"
-                          style={{ backgroundColor: ev.classification.meta.color }}
-                        >
-                          {ev.classification.meta.symbol}
-                        </span>
-                      )}
-                    </button>
-                  );
-                })
+          {/* Jugador superior */}
+          <div className={`player-bar ${!gameOver && stm === topColor ? 'player-bar--active-turn' : ''}`}>
+            <div className="player-bar__info">
+              <span className={`piece-badge piece-badge--${topColor}`}>
+                {topColor === 'w' ? '♔' : '♚'}
+              </span>
+              <div>
+                <strong className="player-bar__name">
+                  <span className="player-name--full">{topNameFull}</span>
+                  <span className="player-name--short">{topNameShort}</span>
+                </strong>
+                <small className="block-sub">
+                  {topIsPlayer
+                    ? matDiffPlayer > 0
+                      ? `Ventaja: +${matDiffPlayer}`
+                      : 'Piezas activas'
+                    : matDiffPlayer < 0
+                      ? `Ventaja: +${Math.abs(matDiffPlayer)}`
+                      : `Nivel ${currentLevel.index}/9`}
+                </small>
+              </div>
+            </div>
+            <div className="player-bar__right">
+              {!topIsPlayer && isOpponentThinking && (
+                <span className="thinking-chip">Pensando…</span>
+              )}
+              {clockEnabled && (
+                <span className={`clock-chip ${stm === topColor ? 'clock-chip--active' : ''}`}>
+                  ⏱ {formatClock(topColor === 'w' ? whiteClockMs : blackClockMs)}
+                </span>
               )}
             </div>
           </div>
 
-          {/* Burbuja del Profesor estilo Chess.com Game Review encima del tablero */}
+          {/* Contenedor del tablero + barra de evaluación */}
+          <div className="board-stage">
+            <EvalBar
+              score={liveEvaluation}
+              orientation={orientation}
+              hidden={mode === 'no_aid' && !gameOver}
+              depth={liveLines?.depth}
+            />
+            <InteractiveBoard
+              fen={displayedFen}
+              orientation={orientation}
+              playerColor={playerColor}
+              canMove={canMoveOnBoard}
+              allowBothSides={Boolean(variant?.active)}
+              lastMove={lastMove}
+              shapes={shapes}
+              vulnerableSquares={vulnerableSquares}
+              isVariantMode={Boolean(variant?.active)}
+              showSquareLabels={showSquareLabelsOnBoard}
+              boardTheme={boardTheme}
+              onMove={(from, to, promo) => void playUserMove(from, to, promo)}
+            />
+          </div>
+
+          {/* Jugador inferior + Leyenda compacta integrada */}
+          <div className={`player-bar ${!gameOver && stm === bottomColor ? 'player-bar--active-turn' : ''}`}>
+            <div className="player-bar__info">
+              <span className={`piece-badge piece-badge--${bottomColor}`}>
+                {bottomColor === 'w' ? '♔' : '♚'}
+              </span>
+              <div>
+                <strong className="player-bar__name">
+                  <span className="player-name--full">{bottomNameFull}</span>
+                  <span className="player-name--short">{bottomNameShort}</span>
+                </strong>
+                <small className="block-sub">
+                  {bottomIsPlayer && matDiffPlayer > 0
+                    ? `Ventaja: +${matDiffPlayer} · ${statusBanner}`
+                    : statusBanner}
+                </small>
+              </div>
+            </div>
+            <div className="player-bar__right">
+              {(mode !== 'no_aid' || gameOver) && showVisualAids && (
+                <div className="board-mini-legend" aria-label="Colores de las flechas">
+                  <span><i className="legend-dot legend-dot--green" /> Mejor</span>
+                  <span><i className="legend-dot legend-dot--blue" /> Tu jugada</span>
+                  <span><i className="legend-dot legend-dot--red" /> Peligro</span>
+                </div>
+              )}
+              {clockEnabled && (
+                <span className={`clock-chip ${stm === bottomColor ? 'clock-chip--active' : ''}`}>
+                  ⏱ {formatClock(bottomColor === 'w' ? whiteClockMs : blackClockMs)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Tarjeta del Profesor estilo Chess.com Game Review directamente bajo el tablero */}
           {(mode !== 'no_aid' || gameOver) && (
             <div
               className={`coach-mini-bubble ${teachingPause?.active ? 'coach-mini-bubble--pause' : ''}`}
@@ -395,7 +472,7 @@ export const App: React.FC = () => {
                         className="coach-mini-bubble__more"
                         onClick={() => handleSelectTab('coach')}
                       >
-                        Análisis ↓
+                        Ver análisis ↓
                       </button>
                     </div>
                     <p className="coach-mini-bubble__text">{activeEval.whatHappened}</p>
@@ -403,110 +480,16 @@ export const App: React.FC = () => {
                 ) : (
                   <div className="coach-mini-bubble__top">
                     <span className="coach-mini-bubble__badge coach-mini-bubble__badge--ready">
-                      Stockfish 19 Listo
+                      Stockfish 19
                     </span>
                     <span className="coach-mini-bubble__text">
-                      {statusBanner || 'La flecha verde en el tablero te indica la jugada más fuerte.'}
+                      {statusBanner || 'Mueve una pieza. La flecha verde te indica la mejor jugada.'}
                     </span>
                   </div>
                 )}
               </div>
             </div>
           )}
-
-          {/* Jugador superior */}
-          <div className={`player-bar ${!gameOver && stm === topColor ? 'player-bar--active-turn' : ''}`}>
-            <div className="player-bar__info">
-              <span className={`piece-badge piece-badge--${topColor}`}>
-                {topColor === 'w' ? '♔' : '♚'}
-              </span>
-              <div>
-                <strong>
-                  {topColor === playerColor
-                    ? `Tú (${playerColor === 'w' ? 'Blancas ♔' : 'Negras ♚'})`
-                    : `Entrenador Stockfish (${topColor === 'w' ? 'Blancas ♔' : 'Negras ♚'} · ${currentLevel.name})`}
-                </strong>
-                <small className="block-sub">
-                  {topColor === playerColor
-                    ? matDiffPlayer > 0
-                      ? `Ventaja material: +${matDiffPlayer}`
-                      : 'Piezas activas'
-                    : matDiffPlayer < 0
-                      ? `Ventaja material: +${Math.abs(matDiffPlayer)}`
-                      : `Nivel ${currentLevel.index}/9`}
-                </small>
-              </div>
-            </div>
-            <div className="player-bar__right">
-              {topColor !== playerColor && isOpponentThinking && (
-                <span className="thinking-chip">Pensando…</span>
-              )}
-              {clockEnabled && (
-                <span className={`clock-chip ${stm === topColor ? 'clock-chip--active' : ''}`}>
-                  ⏱ {formatClock(topColor === 'w' ? whiteClockMs : blackClockMs)}
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Contenedor del tablero + barra de evaluación */}
-          <div className="board-stage">
-            <EvalBar
-              score={liveEvaluation}
-              orientation={orientation}
-              hidden={mode === 'no_aid' && !gameOver}
-              depth={liveLines?.depth}
-            />
-            <InteractiveBoard
-              fen={displayedFen}
-              orientation={orientation}
-              playerColor={playerColor}
-              canMove={canMoveOnBoard}
-              allowBothSides={Boolean(variant?.active)}
-              lastMove={lastMove}
-              shapes={shapes}
-              vulnerableSquares={vulnerableSquares}
-              isVariantMode={Boolean(variant?.active)}
-              showSquareLabels={showSquareLabelsOnBoard}
-              boardTheme={boardTheme}
-              onMove={(from, to, promo) => void playUserMove(from, to, promo)}
-            />
-          </div>
-
-          {/* Jugador inferior + Leyenda compacta integrada */}
-          <div className={`player-bar ${!gameOver && stm === bottomColor ? 'player-bar--active-turn' : ''}`}>
-            <div className="player-bar__info">
-              <span className={`piece-badge piece-badge--${bottomColor}`}>
-                {bottomColor === 'w' ? '♔' : '♚'}
-              </span>
-              <div>
-                <strong>
-                  {bottomColor === playerColor
-                    ? `Tú (${playerColor === 'w' ? 'Blancas ♔' : 'Negras ♚'})`
-                    : `Entrenador Stockfish (${bottomColor === 'w' ? 'Blancas ♔' : 'Negras ♚'} · ${currentLevel.name})`}
-                </strong>
-                <small className="block-sub">
-                  {bottomColor === playerColor && matDiffPlayer > 0
-                    ? `Ventaja material: +${matDiffPlayer} · ${statusBanner}`
-                    : statusBanner}
-                </small>
-              </div>
-            </div>
-            <div className="player-bar__right">
-              {(mode !== 'no_aid' || gameOver) && showVisualAids && (
-                <div className="board-mini-legend" aria-label="Colores de las flechas">
-                  <span><i className="legend-dot legend-dot--green" /> Mejor</span>
-                  <span><i className="legend-dot legend-dot--blue" /> Tu jugada</span>
-                  <span><i className="legend-dot legend-dot--red" /> Peligro</span>
-                </div>
-              )}
-              {clockEnabled && (
-                <span className={`clock-chip ${stm === bottomColor ? 'clock-chip--active' : ''}`}>
-                  ⏱ {formatClock(bottomColor === 'w' ? whiteClockMs : blackClockMs)}
-                </span>
-              )}
-            </div>
-          </div>
 
           {/* Barra limpia de controles rápidos debajo del tablero */}
           <BoardQuickControls />
@@ -515,14 +498,6 @@ export const App: React.FC = () => {
         {/* Columna derecha: Navegación + Cinta de Jugadas + Panel Activo */}
         <div id="coach-section" className="coach-column">
           <nav className="workspace-tabs" aria-label="Secciones del entrenador">
-            <button
-              type="button"
-              className="tab-btn tab-btn--mobile-board"
-              onClick={scrollToBoardTop}
-            >
-              <span className="tab-btn__icon">♟</span>
-              <span className="tab-btn__label">Tablero</span>
-            </button>
             <button
               type="button"
               className={`tab-btn ${activeTab === 'coach' ? 'tab-btn--active' : ''}`}
