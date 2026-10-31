@@ -213,16 +213,33 @@ interface IndexedOpening extends OpeningEntry {
 }
 
 const BY_FEN = new Map<string, IndexedOpening>();
+const BY_PREFIX_FEN = new Map<string, OpeningEntry>();
 
 for (const op of RAW_OPENINGS) {
   const c = new Chess();
   let ok = true;
   for (const m of op.moves) {
-    try { c.move(m); } catch { ok = false; break; }
+    try {
+      c.move(m);
+      if (!BY_PREFIX_FEN.has(fenKey(c.fen()))) {
+        BY_PREFIX_FEN.set(fenKey(c.fen()), op);
+      }
+    } catch {
+      ok = false;
+      break;
+    }
   }
   if (ok) {
     BY_FEN.set(fenKey(c.fen()), { ...op, ply: op.moves.length, fenKey: fenKey(c.fen()) });
   }
+}
+
+/**
+ * Comprueba si un FEN concreto pertenece a una línea teórica de apertura del catálogo.
+ */
+export function isKnownBookPosition(fen: string): OpeningEntry | null {
+  const k = fenKey(fen);
+  return BY_FEN.get(k) ?? BY_PREFIX_FEN.get(k) ?? null;
 }
 
 /**

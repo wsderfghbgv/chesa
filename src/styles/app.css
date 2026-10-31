@@ -2798,6 +2798,766 @@ cg-board square.checkmate-sq {
   }
 }
 
+/* ==========================================================================
+   EVAL BAR DELTA & MATE BADGES
+   ========================================================================== */
+.eval-bar__delta {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 22px;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.58rem;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: 4px;
+  white-space: nowrap;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.eval-bar__delta--gain {
+  background: rgba(34, 197, 94, 0.9);
+  color: #064e3b;
+}
+
+.eval-bar__delta--loss {
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+}
+
+.eval-bar__mate {
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.55rem;
+  font-weight: 800;
+  color: #f59e0b;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 1px 3px;
+  border-radius: 3px;
+  z-index: 5;
+}
+
+/* ==========================================================================
+   PROFESOR VIRTUAL INTERACTIVO CON VOZ (AVATAR WIDGET)
+   ========================================================================== */
+.coach-avatar-panel {
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(15, 23, 42, 0.85));
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 1rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.coach-avatar-header {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.coach-avatar-visual {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0284c7, #6366f1);
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(14, 165, 233, 0.25);
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.coach-avatar-visual--speaking {
+  box-shadow: 0 0 22px rgba(6, 182, 212, 0.65);
+  animation: avatar-speak-pulse 1.8s infinite ease-in-out;
+}
+
+.coach-avatar-visual--listening {
+  box-shadow: 0 0 22px rgba(245, 158, 11, 0.65);
+  animation: avatar-listen-pulse 1.5s infinite ease-in-out;
+}
+
+.coach-avatar-visual--thinking {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.5);
+  animation: avatar-think-pulse 2s infinite ease-in-out;
+}
+
+@keyframes avatar-speak-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes avatar-listen-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+@keyframes avatar-think-pulse {
+  0%, 100% { opacity: 0.9; }
+  50% { opacity: 1; }
+}
+
+.coach-avatar-svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  display: block;
+}
+
+.coach-avatar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.coach-avatar-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.coach-avatar-name {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #f8fafc;
+}
+
+.coach-avatar-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.coach-avatar-badge--speaking {
+  background: rgba(6, 182, 212, 0.18);
+  color: #22d3ee;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+}
+
+.coach-avatar-badge--listening {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+}
+
+.coach-avatar-badge--thinking {
+  background: rgba(168, 85, 247, 0.18);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+}
+
+.coach-avatar-badge--idle {
+  background: rgba(148, 163, 184, 0.12);
+  color: #94a3b8;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.coach-avatar-subtext {
+  font-size: 0.76rem;
+  color: #94a3b8;
+}
+
+/* Modos de enseñanza */
+.coach-teaching-mode-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.coach-teaching-mode-label {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-right: 0.25rem;
+  font-weight: 600;
+}
+
+.coach-mode-chip {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+  font-size: 0.73rem;
+  padding: 0.22rem 0.55rem;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.coach-mode-chip:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #f8fafc;
+}
+
+.coach-mode-chip--active {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.25), rgba(99, 102, 241, 0.25));
+  border-color: #38bdf8;
+  color: #38bdf8;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.25);
+}
+
+/* Subtítulos sincronizados estilo karaoke */
+.coach-subtitles-box {
+  background: rgba(15, 23, 42, 0.75);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 0.65rem;
+  padding: 0.7rem 0.85rem;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.coach-subtitles-text {
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #e2e8f0;
+}
+
+.coach-subtitle-chunk {
+  transition: color 0.2s ease, background 0.2s ease;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.coach-subtitle-chunk--current {
+  color: #38bdf8;
+  background: rgba(14, 165, 233, 0.22);
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+}
+
+/* Controles de audio */
+.coach-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding-top: 0.25rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.coach-audio-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.coach-sliders-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.coach-slider-item {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.coach-rate-slider,
+.coach-volume-slider {
+  width: 65px;
+  accent-color: #38bdf8;
+  cursor: pointer;
+}
+
+.coach-depth-select {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #f1f5f9;
+  font-size: 0.73rem;
+  border-radius: 0.4rem;
+  padding: 0.2rem 0.45rem;
+  cursor: pointer;
+}
+
+/* Preguntas rápidas y Chat interactivo con el profesor */
+.coach-qa-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  background: rgba(15, 23, 42, 0.5);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.coach-quick-chips {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+  scrollbar-width: thin;
+}
+
+.coach-chip-btn {
+  white-space: nowrap;
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  color: #93c5fd;
+  font-size: 0.73rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.coach-chip-btn:hover {
+  background: rgba(14, 165, 233, 0.15);
+  border-color: #38bdf8;
+  color: #f8fafc;
+}
+
+.coach-qa-form {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.coach-qa-input {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #f8fafc;
+  font-size: 0.8rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: 0.5rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.coach-qa-input:focus {
+  border-color: #38bdf8;
+}
+
+.coach-mic-btn {
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #cbd5e1;
+  font-size: 0.85rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.coach-mic-btn:hover {
+  border-color: #f59e0b;
+}
+
+.coach-mic-btn--active {
+  background: rgba(245, 158, 11, 0.25);
+  border-color: #f59e0b;
+  color: #f59e0b;
+  animation: avatar-listen-pulse 1.2s infinite ease-in-out;
+}
+
+.coach-qa-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  max-height: 180px;
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.coach-qa-item {
+  padding: 0.4rem 0.65rem;
+  border-radius: 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.35;
+}
+
+.coach-qa-item--user {
+  background: rgba(30, 41, 59, 0.7);
+  border-left: 3px solid #38bdf8;
+  color: #e2e8f0;
+}
+
+.coach-qa-item--coach {
+  background: rgba(15, 23, 42, 0.85);
+  border-left: 3px solid #10b981;
+  color: #f1f5f9;
+}
+
+/* ==========================================================================
+   GAME REVIEW & POST-GAME REPORT VIEW (LICHESS / CHESS.COM STYLE)
+   ========================================================================== */
+.report-result-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(99, 102, 241, 0.2));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  padding: 0.1rem 0.55rem;
+  border-radius: 0.4rem;
+  font-weight: 800;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.batch-analysis-banner {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 0.75rem;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25);
+}
+
+.batch-analysis-banner__info {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.85rem;
+  color: #e2e8f0;
+}
+
+.batch-analysis-banner__bar {
+  width: 100%;
+  height: 6px;
+  background: rgba(30, 41, 59, 0.8);
+  border-radius: 9999px;
+  overflow: hidden;
+}
+
+.batch-analysis-banner__fill {
+  height: 100%;
+  background: linear-gradient(90deg, #38bdf8, #818cf8);
+  transition: width 0.3s ease;
+}
+
+/* Dual Overview Blancas vs Negras */
+.report-dual-overview {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+.report-side-card {
+  background: rgba(30, 41, 59, 0.55);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 1rem;
+  padding: 1.15rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 0.5rem;
+  box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.25);
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s;
+}
+
+.report-side-card--player {
+  border-color: rgba(56, 189, 248, 0.45);
+  background: linear-gradient(135deg, rgba(30, 41, 59, 0.7), rgba(14, 165, 233, 0.08));
+}
+
+.report-side-card__top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.report-side-card__icon {
+  font-size: 1.6rem;
+  line-height: 1;
+}
+
+.report-side-card__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.report-side-card__accuracy {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.report-side-card__number {
+  font-size: 2.3rem;
+  font-weight: 900;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  color: #f8fafc;
+  line-height: 1.1;
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+}
+
+.report-side-card__label {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+.report-side-card__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
+}
+
+.report-dual-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.report-dual-vs__pill {
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #64748b;
+  font-weight: 900;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 9999px;
+  letter-spacing: 0.08em;
+}
+
+/* Tabla comparativa de clasificaciones */
+.report-classification-table-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 0.85rem;
+  padding: 0.95rem;
+  margin: 0.75rem 0;
+}
+
+.report-classification-table-card h4 {
+  font-size: 0.9rem;
+  margin-bottom: 0.65rem;
+  color: #f1f5f9;
+}
+
+.report-cat-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.report-cat-row {
+  display: grid;
+  grid-template-columns: 45px 1fr 45px;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.45rem;
+  transition: background 0.15s;
+}
+
+.report-cat-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.report-cat-count {
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.88rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.report-cat-count--w {
+  color: #f8fafc;
+}
+
+.report-cat-count--b {
+  color: #cbd5e1;
+}
+
+.report-cat-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(30, 41, 59, 0.5);
+  border-left: 3px solid;
+  border-radius: 0.35rem;
+  padding: 0.22rem 0.55rem;
+}
+
+.report-cat-badge__sym {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 0.3rem;
+  color: #0f172a;
+  font-size: 0.72rem;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+
+.report-cat-badge__text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+/* Tarjetas de momentos destacados */
+.report-highlights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.85rem;
+  margin: 0.85rem 0;
+}
+
+.highlight-card {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+}
+
+.highlight-card--best {
+  border-left: 4px solid #10b981;
+}
+
+.highlight-card--critical {
+  border-left: 4px solid #f59e0b;
+}
+
+.highlight-card--mistake {
+  border-left: 4px solid #ef4444;
+}
+
+.highlight-card--stats {
+  border-left: 4px solid #6366f1;
+}
+
+.highlight-card__header {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: #f1f5f9;
+}
+
+.highlight-card__icon {
+  font-size: 1rem;
+}
+
+.highlight-card__move {
+  font-size: 0.82rem;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.highlight-card__desc {
+  font-size: 0.77rem;
+  color: #94a3b8;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.stats-mini-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.78rem;
+}
+
+.stats-mini-list li {
+  display: flex;
+  justify-content: space-between;
+  color: #94a3b8;
+}
+
+.stats-mini-list strong {
+  color: #f1f5f9;
+}
+
+/* Banner de práctica de errores */
+.practice-mistakes-banner {
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.18), rgba(99, 102, 241, 0.22));
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 1rem;
+  padding: 1.15rem 1.4rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0;
+  box-shadow: 0 8px 25px -5px rgba(14, 165, 233, 0.2);
+}
+
+.practice-mistakes-banner__content h4 {
+  font-size: 1.1rem;
+  margin: 0.2rem 0;
+  color: #f8fafc;
+}
+
+.practice-mistakes-banner__content p {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  margin: 0;
+  max-width: 600px;
+}
+
+@media (max-width: 768px) {
+  .report-dual-overview {
+    grid-template-columns: 1fr;
+    gap: 0.65rem;
+  }
+
+  .report-dual-vs {
+    display: none;
+  }
+
+  .practice-mistakes-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .coach-controls-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .coach-sliders-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
 /* Accesibilidad: Respeto estricto a prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
   *,

@@ -688,10 +688,12 @@ export async function importBackupOrPgn(
         totalFullMoves: Math.ceil(verbose.length / 2),
         playerMoveCount: verbose.filter((m) => m.color === playerColor).length,
         counts: {
+          brillante: 0,
           excelente: 0,
           mejor: 0,
           precisa: 0,
           buena: 0,
+          libro: 0,
           oportunidad_perdida: 0,
           imprecision: 0,
           error: 0,

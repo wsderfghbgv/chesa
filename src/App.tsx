@@ -6,6 +6,7 @@ import {
 } from './state/useChessStore';
 import { parseUci, materialBalance } from './chess/utils';
 import { LEVELS, getLevel } from './engine/levels';
+import { cpFor } from './engine/score';
 import { GAME_MODE_LABELS, type GameMode } from './storage/db';
 import { EvalBar } from './components/EvalBar';
 import { InteractiveBoard } from './components/InteractiveBoard';
@@ -186,6 +187,13 @@ export const App: React.FC = () => {
     !variant?.active && (mode !== 'no_aid' || gameOver) && activeEval
       ? activeEval.vulnerableSquares
       : EMPTY_SQUARES;
+
+  const evalDelta = activeEval
+    ? {
+        cp: cpFor(activeEval.scoreAfter, 'w') - cpFor(activeEval.scoreBefore, 'w'),
+        text: activeEval.deltaText,
+      }
+    : null;
 
   const canMoveOnBoard =
     variant?.active
@@ -383,6 +391,7 @@ export const App: React.FC = () => {
               orientation={orientation}
               hidden={mode === 'no_aid' && !gameOver}
               depth={liveLines?.depth}
+              delta={evalDelta}
             />
             <InteractiveBoard
               fen={displayedFen}

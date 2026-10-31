@@ -16,10 +16,12 @@ import { cpFor, isMateFor } from '../engine/score';
 import type { PvLine } from '../engine/StockfishEngine';
 
 export type MoveCategory =
+  | 'brillante'
   | 'excelente'
   | 'mejor'
   | 'precisa'
   | 'buena'
+  | 'libro'
   | 'oportunidad_perdida'
   | 'imprecision'
   | 'error'
@@ -36,12 +38,16 @@ export interface CategoryMeta {
 }
 
 export const CATEGORIES: Record<MoveCategory, CategoryMeta> = {
+  brillante: {
+    id: 'brillante', label: 'Brillante', short: 'Brillante', symbol: '!!',
+    color: '#06b6d4', isPositive: true, isMistake: false,
+  },
   excelente: {
-    id: 'excelente', label: 'Excelente', short: 'Excelente', symbol: '!!',
+    id: 'excelente', label: 'Excelente', short: 'Excelente', symbol: '!',
     color: '#0ea5e9', isPositive: true, isMistake: false,
   },
   mejor: {
-    id: 'mejor', label: 'Mejor jugada', short: 'Mejor', symbol: '★',
+    id: 'mejor', label: 'Mejor movimiento', short: 'Mejor', symbol: '★',
     color: '#16a34a', isPositive: true, isMistake: false,
   },
   precisa: {
@@ -49,8 +55,12 @@ export const CATEGORIES: Record<MoveCategory, CategoryMeta> = {
     color: '#22c55e', isPositive: true, isMistake: false,
   },
   buena: {
-    id: 'buena', label: 'Buena', short: 'Buena', symbol: '○',
+    id: 'buena', label: 'Bueno', short: 'Bueno', symbol: '○',
     color: '#65a30d', isPositive: true, isMistake: false,
+  },
+  libro: {
+    id: 'libro', label: 'Teoría', short: 'Teoría', symbol: '📖',
+    color: '#a855f7', isPositive: true, isMistake: false,
   },
   oportunidad_perdida: {
     id: 'oportunidad_perdida', label: 'Oportunidad perdida', short: 'Oportunidad', symbol: '?!',
@@ -65,7 +75,7 @@ export const CATEGORIES: Record<MoveCategory, CategoryMeta> = {
     color: '#f97316', isPositive: false, isMistake: true,
   },
   error_grave: {
-    id: 'error_grave', label: 'Error grave', short: 'Error grave', symbol: '??',
+    id: 'error_grave', label: 'Grave error', short: 'Grave error', symbol: '??',
     color: '#dc2626', isPositive: false, isMistake: true,
   },
 };
@@ -126,6 +136,10 @@ export interface ClassifyInput {
   /** Líneas MultiPV calculadas en la posición ANTES de mover. */
   linesBefore: PvLine[];
   thresholds?: ClassificationThresholds;
+  /** Si la jugada pertenece a la teoría de aperturas conocida. */
+  isBookMove?: boolean;
+  /** Si la jugada implica un sacrificio táctico válido o golpe brillante respaldado por el motor. */
+  isBrillianceCandidate?: boolean;
 }
 
 export interface ClassificationResult {
@@ -144,7 +158,7 @@ export interface ClassificationResult {
 
 export function classifyMove(input: ClassifyInput): ClassificationResult {
   const th = input.thresholds ?? DEFAULT_THRESHOLDS;
-  const { mover, playedUci, scoreBefore, scoreAfter, linesBefore } = input;
+  const { mover, playedUci, scoreBefore, scoreAfter, linesBefore, isBookMove, isBrillianceCandidate } = input;
   const opp: Color = mover === 'w' ? 'b' : 'w';
 
   const cpBefore = Math.max(-1500, Math.min(1500, cpFor(scoreBefore, mover)));
@@ -183,8 +197,12 @@ export function classifyMove(input: ClassifyInput): ClassificationResult {
     // Tenía mate forzado y lo dejó escapar: si aún queda con ventaja o igualdad es oportunidad perdida;
     // si además queda perdido es error grave.
     category = cpAfter >= -40 ? 'oportunidad_perdida' : 'error_grave';
+  } else if (isBookMove && effLoss <= th.goodMaxCp) {
+    category = 'libro';
+  } else if (isBrillianceCandidate && (isTopEngineMove || playedIsEquallyGood) && effLoss <= th.preciseMaxCp && cpAfter >= 50) {
+    category = 'brillante';
   } else if (isTopEngineMove || (playedIsEquallyGood && rawLoss <= th.equalMoveMarginCp)) {
-    // ¿Es una " jugada excelente" (única jugada que sostiene o gana en una posición crítica)?
+    // ¿Es una "jugada excelente" (única jugada que sostiene o gana en una posición crítica)?
     const gapToSecond =
       topLine && secondLine
         ? cpFor(topLine.score, mover) - cpFor(secondLine.score, mover)

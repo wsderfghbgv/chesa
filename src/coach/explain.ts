@@ -20,6 +20,7 @@ import {
   pieceAt,
   pieceWithArticle,
   PIECE_VALUE,
+  materialBalance,
 } from '../chess/utils';
 import {
   type Phase,
@@ -35,7 +36,8 @@ import {
   threatsOf,
   attackersOf,
 } from '../chess/features';
-import { detectOpening } from '../chess/openings';
+import { detectOpening, isKnownBookPosition } from '../chess/openings';
+import { describeMoveNaturally, humanizeChessText } from '../chess/humanLanguage';
 import {
   type Score,
   cpFor,
@@ -52,6 +54,8 @@ import {
 } from './classify';
 
 export type ExplanationLevel = 'basico' | 'intermedio' | 'avanzado';
+export type ExplanationDepth = 'breve' | 'normal' | 'detallada';
+export type CoachTeachingMode = 'auto' | 'on_demand' | 'silent';
 
 export type MotifId =
   | 'pieza_indefensa'
@@ -155,6 +159,14 @@ export interface MoveEvaluation {
   thinkTimeMs?: number;
   /** Explicación enriquecida opcional generada por LLM sobre estos mismos datos. */
   llmExplanation?: string;
+  /** Observaciones tácticas y estratégicas concretas detectadas en la posición (Sección 4). */
+  tacticalObservations?: string[];
+  /** Guiones hablados para el Profesor Virtual con Voz en tres niveles de profundidad (Sección 13). */
+  spokenNarrative?: {
+    breve: string;
+    normal: string;
+    detallada: string;
+  };
 }
 
 export interface BuildEvaluationInput {
@@ -206,6 +218,18 @@ export function buildMoveEvaluation(input: BuildEvaluationInput): MoveEvaluation
   const bestSan = uciToSan(fenBefore, bestUci);
   const bestSanEs = localizeSan(bestSan, 'es');
 
+  const parsedPlayedEarly = parseUci(playedUci);
+  const movedPieceEarly = beforeChess.get(parsedPlayedEarly.from);
+  const isBrillianceCandidate = Boolean(
+    movedPieceEarly &&
+      PIECE_VALUE[movedPieceEarly.type] >= 3 &&
+      attackersOf(afterChess, parsedPlayedEarly.to, opp).length > 0 &&
+      attackersOf(afterChess, parsedPlayedEarly.to, mover).length === 0 &&
+      cpFor(scoreAfter, mover) >= 120,
+  );
+  const bookEntryAfter = fensHistory && ply <= 10 ? isKnownBookPosition(fenAfter) : null;
+  const isBookMove = Boolean(bookEntryAfter && !isBrillianceCandidate);
+
   const classification = classifyMove({
     mover,
     playedUci,
@@ -213,6 +237,8 @@ export function buildMoveEvaluation(input: BuildEvaluationInput): MoveEvaluation
     scoreAfter,
     linesBefore: analysisBefore.lines,
     thresholds,
+    isBookMove,
+    isBrillianceCandidate,
   });
 
   // Alternativas igualmente buenas.
@@ -585,6 +611,105 @@ export function buildMoveEvaluation(input: BuildEvaluationInput): MoveEvaluation
     }
   }
 
+  // Observaciones tácticas y estratégicas concretas (Sección 4)
+  const tacticalObservations: string[] = [];
+  if (newHangingOwn.length > 0) {
+    for (const h of newHangingOwn) {
+      tacticalObservations.push(
+        `Pieza indefensa: ${pieceAt(h.type, h.square)} quedó expuesta (${h.reason === 'undefended' ? 'sin defensores' : 'atacada por pieza de menor valor'}).`,
+      );
+    }
+  }
+  if (oppCapturesSquare && oppCapturedPieceName && oppReplySanEs) {
+    tacticalObservations.push(
+      `Pieza vulnerable a captura inmediata: el rival puede jugar ${oppReplySanEs} capturando ${oppCapturedPieceName}.`,
+    );
+  }
+  if (bestUci !== playedUci && bestCaptured) {
+    tacticalObservations.push(
+      `Oportunidad de ganar material: ${bestSanEs} permitía capturar ${bestCaptured}.`,
+    );
+  }
+  if (bestUci !== playedUci && bestFork) {
+    tacticalObservations.push(
+      `Táctica desaprovechada (ataque doble): ${bestSanEs} atacaba simultáneamente ${bestFork.targets.map((t) => pieceAt(t.type, t.square)).join(' y ')}.`,
+    );
+  }
+  if (bestUci !== playedUci && bestDiscovered.length > 0) {
+    const d = bestDiscovered[0];
+    tacticalObservations.push(
+      `Táctica desaprovechada (ataque a la descubierta): ${bestSanEs} abría la acción de ${pieceAt(d.slider.type, d.slider.square)} sobre ${pieceAt(d.target.type, d.target.square)}.`,
+    );
+  }
+  if (afterChess.inCheck()) {
+    if (classification.meta.isMistake) {
+      tacticalObservations.push(
+        `Jaque innecesario o prematuro: ${playedSanEs} da jaque pero cede ventaja o permite al rival mejorar su posición con ${oppReplySanEs ?? 'su respuesta'}.`,
+      );
+    } else {
+      tacticalObservations.push(
+        `Jaque con iniciativa: ${playedSanEs} obliga al rey rival a reaccionar manteniendo la ventaja (${afterStr}).`,
+      );
+    }
+  } else if (bestUci !== playedUci && bestChessAfter.inCheck() && classification.meta.isMistake) {
+    tacticalObservations.push(
+      `Jaque ventajoso omitido: ${bestSanEs} daba jaque directo ganando tiempo e iniciativa.`,
+    );
+  }
+  if (threatsBeforeByOpp.length > 0 && classification.meta.isMistake) {
+    tacticalObservations.push(
+      `Amenaza ignorada: el rival amenazaba ${localizeSan(threatsBeforeByOpp[0].san, 'es')} antes de este movimiento.`,
+    );
+  }
+  if (phase === 'apertura' && moveNumber <= 10 && devAfter.undevelopedMinors === devBefore.undevelopedMinors && classification.meta.isMistake) {
+    tacticalObservations.push(
+      `Retraso de desarrollo: quedan ${devAfter.undevelopedMinors} piezas menores sin desarrollar en la apertura.`,
+    );
+  }
+  if (ksAfter.zoneAttacks > ksBefore.zoneAttacks && classification.meta.isMistake) {
+    tacticalObservations.push(
+      `Debilitamiento de la defensa del rey: aumentaron las amenazas sobre el entorno de tu rey.`,
+    );
+  }
+  if (isMateFor(scoreBefore, mover) && !isMateFor(scoreAfter, mover)) {
+    tacticalObservations.push(
+      `Oportunidad de jaque mate omitida: existía secuencia de mate forzado empezando con ${bestSanEs}.`,
+    );
+  }
+  if (isMateFor(scoreAfter, opp) && !isMateFor(scoreBefore, opp)) {
+    tacticalObservations.push(
+      `Peligro de mate en contra: esta jugada permite mate forzado en ${Math.abs(scoreAfter.value)} empezando con ${oppReplySanEs ?? 'la línea principal'}.`,
+    );
+  }
+  if (cpFor(scoreBefore, mover) >= 150 && cpFor(scoreAfter, mover) <= 25) {
+    tacticalObservations.push(
+      `Pérdida de ventaja clara: la posición pasó de ventaja (${beforeStr}) a igualdad o desventaja (${afterStr}).`,
+    );
+  }
+
+  // Construcción del guion hablado del Profesor Virtual en 3 profundidades (Sección 13)
+  const moverLabel = mover === 'w' ? 'las blancas' : 'las negras';
+  const shortScript = classification.meta.isPositive
+    ? `Jugada ${moveNumber} de ${moverLabel}: ${playedSanEs}, clasificada como ${classification.meta.label}. ${whatYouDidWell}`
+    : `Jugada ${moveNumber} de ${moverLabel}: ${playedSanEs}, clasificada como ${classification.meta.label}. ${bestAlternativeExplain}`;
+
+  const normalScript = classification.meta.isPositive
+    ? `Jugada ${moveNumber} de ${moverLabel}: ${playedSanEs}, ${classification.meta.label}. ${whatHappened} ${whatToWatch} Recuerda: ${coachLesson}`
+    : `Jugada ${moveNumber} de ${moverLabel}: ${playedSanEs}, ${classification.meta.label}. ${whatHappened} ${bestAlternativeExplain} Consejo del profesor: ${recommendation}`;
+
+  const detailedScript = [
+    `Análisis de la jugada ${moveNumber} de ${moverLabel}: ${playedSanEs}, clasificada como ${classification.meta.label}.`,
+    whatHappened,
+    whatYouDidWell,
+    whatToWatch,
+    bestAlternativeExplain,
+    tacticalObservations.length > 0 ? `Observación clave: ${tacticalObservations[0]}` : '',
+    `Qué debías considerar: ${whatToConsider}`,
+    `Lección para recordar: ${coachLesson}`,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
   return {
     ply,
     moveNumber,
@@ -624,6 +749,253 @@ export function buildMoveEvaluation(input: BuildEvaluationInput): MoveEvaluation
     shapes,
     vulnerableSquares,
     thinkTimeMs,
+    tacticalObservations,
+    spokenNarrative: {
+      breve: shortScript,
+      normal: normalScript,
+      detallada: detailedScript,
+    },
   };
 }
+
+export const QUICK_COACH_QUESTIONS: string[] = [
+  '¿Por qué esta jugada es un error?',
+  '¿Qué habría pasado si hubiera movido otra pieza?',
+  '¿Por qué mi rival tiene ventaja?',
+  '¿Cómo puedo evitar este tipo de errores?',
+  '¿Qué debería aprender de esta posición?',
+  '¿Cuál es el plan para las próximas jugadas?',
+  '¿Puedes explicármelo de una manera más sencilla?',
+];
+
+export interface CoachQuestionInput {
+  question: string;
+  fen: string;
+  playerColor: Color;
+  level: ExplanationLevel;
+  activeEval?: MoveEvaluation | null;
+  liveLines?: AnalysisResult | null;
+  fensHistory?: string[];
+}
+
+export interface CoachQuestionResponse {
+  question: string;
+  answer: string;
+  spokenAnswer: string;
+  highlightUci?: string;
+}
+
+/**
+ * Responde cualquier pregunta del estudiante sobre la jugada o posición actual,
+ * fundamentándose exclusivamente en la posición del tablero (chess.js + features.ts)
+ * y en las líneas y evaluaciones reales de Stockfish.
+ */
+export function answerCoachQuestion(input: CoachQuestionInput): CoachQuestionResponse {
+  const { question, fen, playerColor, activeEval, liveLines, fensHistory } = input;
+  const qNorm = question
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim();
+
+  const evalFen = activeEval ? activeEval.fenAfter : fen;
+  const beforeFen = activeEval ? activeEval.fenBefore : fen;
+  const chessNow = new Chess(evalFen);
+  const chessBefore = new Chess(beforeFen);
+  const mover: Color = activeEval ? activeEval.mover : chessNow.turn();
+  const playerName = playerColor === 'w' ? 'Blancas' : 'Negras';
+
+  // 1) "¿Puedes explicármelo de una manera más sencilla?"
+  if (qNorm.includes('sencill') || qNorm.includes('facil') || qNorm.includes('simple') || qNorm.includes('entiendo')) {
+    if (activeEval) {
+      const natPlayed = describeMoveNaturally(activeEval.fenBefore, activeEval.playedUci, playerColor);
+      const natBest = describeMoveNaturally(activeEval.fenBefore, activeEval.bestUci, playerColor);
+      const simpleText = activeEval.classification.meta.isMistake
+        ? `En palabras muy sencillas: en la jugada ${activeEval.moveNumber} moviste ${natPlayed?.pieceName?.toLowerCase() ?? 'tu pieza'} (${humanizeChessText(activeEval.playedSanEs)}), pero eso dejó un punto vulnerable que el rival aprovecha. Lo más seguro y fuerte era ${natBest?.naturalSummary?.toLowerCase() ?? humanizeChessText(activeEval.bestSanEs)}: ${humanizeChessText(activeEval.recommendation)}`
+        : `En palabras muy sencillas: tu movimiento con ${natPlayed?.pieceName?.toLowerCase() ?? 'la pieza'} (${humanizeChessText(activeEval.playedSanEs)}) es una buena jugada porque mejora la coordinación de tu ejército y mantiene tus piezas protegidas. ${humanizeChessText(activeEval.coachLesson)}`;
+      return {
+        question,
+        answer: simpleText,
+        spokenAnswer: simpleText,
+        highlightUci: activeEval.bestUci,
+      };
+    }
+    const topUci = liveLines?.lines[0]?.pv[0];
+    const natTop = topUci ? describeMoveNaturally(fen, topUci, playerColor) : null;
+    const ans = natTop
+      ? `En palabras sencillas: tu objetivo ahora con las ${playerName} es mantener tus piezas defendidas y controlar el centro. Una excelente idea aquí es ${natTop.naturalSummary.toLowerCase()}.`
+      : `En palabras sencillas: busca sacar tus caballos y alfiles hacia el centro, poner a tu rey a salvo con el enroque y verificar que ninguna pieza tuya quede sin defensa.`;
+    return { question, answer: ans, spokenAnswer: ans, highlightUci: topUci };
+  }
+
+  // 2) "¿Qué habría pasado si hubiera movido otra pieza / la torre / el caballo / ...?"
+  if (
+    qNorm.includes('que habria pasado') ||
+    qNorm.includes('que pasaria si') ||
+    qNorm.includes('que pasa si') ||
+    qNorm.includes('otra pieza') ||
+    qNorm.includes('si hubiera') ||
+    qNorm.includes('si muevo')
+  ) {
+    const legalMoves = chessBefore.moves({ verbose: true });
+    const pieceMap: Array<{ words: string[]; type: 'n' | 'b' | 'r' | 'q' | 'k' | 'p'; name: string }> = [
+      { words: ['torre'], type: 'r', name: 'la torre' },
+      { words: ['caballo'], type: 'n', name: 'el caballo' },
+      { words: ['alfil'], type: 'b', name: 'el alfil' },
+      { words: ['dama', 'reina'], type: 'q', name: 'la dama' },
+      { words: ['rey'], type: 'k', name: 'el rey' },
+      { words: ['peon'], type: 'p', name: 'un peón' },
+    ];
+    const askedPiece = pieceMap.find((pm) => pm.words.some((w) => qNorm.includes(w)));
+
+    // Buscar si mencionó una casilla destino como e4, f3, d5, etc.
+    const sqMatch = qNorm.match(/\b([a-h][1-8])\b/);
+    const targetSq = sqMatch ? (sqMatch[1] as Square) : null;
+
+    let candidate = legalMoves.find((m) => {
+      const uci = m.from + m.to + (m.promotion ?? '');
+      if (activeEval && uci === activeEval.playedUci) return false;
+      if (askedPiece && m.piece !== askedPiece.type) return false;
+      if (targetSq && m.to !== targetSq) return false;
+      return true;
+    });
+
+    if (!candidate && activeEval && activeEval.bestUci !== activeEval.playedUci) {
+      candidate = legalMoves.find((m) => m.from + m.to + (m.promotion ?? '') === activeEval.bestUci);
+    }
+    if (!candidate) {
+      candidate = legalMoves.find((m) => !activeEval || m.from + m.to + (m.promotion ?? '') !== activeEval.playedUci);
+    }
+
+    if (candidate) {
+      const candUci = candidate.from + candidate.to + (candidate.promotion ?? '');
+      const candSanEs = localizeSan(candidate.san, 'es');
+      const sim = new Chess(beforeFen);
+      tryMove(sim, candUci);
+      const hangOwn = hangingPieces(sim, mover);
+      const forkCand = forkFrom(sim, candidate.to);
+
+      if (activeEval && candUci === activeEval.bestUci) {
+        const ans = `¡Excelente pregunta! Si hubieras jugado ${candSanEs}, habrías hecho la mejor jugada de Stockfish (${formatScore(activeEval.bestScore, mover)}). ${activeEval.bestAlternativeExplain}`;
+        return { question, answer: ans, spokenAnswer: ans, highlightUci: candUci };
+      }
+
+      let consequence = '';
+      if (hangOwn.length > 0) {
+        const h = hangOwn[0];
+        consequence = `Sin embargo, tras ${candSanEs} quedaría ${pieceAt(h.type, h.square)} expuesta a captura rival.`;
+      } else if (forkCand) {
+        consequence = `Con ${candSanEs} crearías un ataque doble sobre ${forkCand.targets.map((t) => pieceAt(t.type, t.square)).join(' y ')}.`;
+      } else {
+        consequence = `Con ${candSanEs} mantendrías una posición jugable, aunque Stockfish prioriza ${activeEval ? activeEval.bestSanEs : candSanEs}${activeEval?.bestLine ? ` siguiendo con ${activeEval.bestLine.formatted}` : ''}.`;
+      }
+      const ans = `Si en esa posición hubieras movido ${askedPiece ? askedPiece.name : 'otra pieza'} jugando ${candSanEs}: ${consequence}`;
+      return { question, answer: ans, spokenAnswer: ans, highlightUci: candUci };
+    }
+  }
+
+  // 3) "¿Por qué esta jugada es un error / imprecisión / buena?"
+  if (qNorm.includes('por que') && (qNorm.includes('error') || qNorm.includes('mala') || qNorm.includes('imprecision') || qNorm.includes('jugada'))) {
+    if (activeEval) {
+      if (activeEval.classification.meta.isMistake) {
+        const obs = activeEval.tacticalObservations?.length ? ` ${activeEval.tacticalObservations[0]}` : '';
+        const ans = `${activeEval.playedSanEs} se clasifica como ${activeEval.classification.meta.label} (${activeEval.deltaText}) porque ${activeEval.whatHappened}${obs} En su lugar, ${activeEval.bestAlternativeExplain}`;
+        return { question, answer: ans, spokenAnswer: ans, highlightUci: activeEval.bestUci };
+      }
+      const ans = `¡De hecho, ${activeEval.playedSanEs} NO es un error! Fue clasificada como «${activeEval.classification.meta.label}» (precisión del ${activeEval.classification.moveAccuracy}%). ${activeEval.whatYouDidWell} ${activeEval.bestAlternativeExplain}`;
+      return { question, answer: ans, spokenAnswer: ans, highlightUci: activeEval.playedUci };
+    }
+  }
+
+  // 4) "¿Por qué mi rival tiene ventaja?" / "¿Quién tiene ventaja?"
+  if (qNorm.includes('ventaja') || qNorm.includes('ganando') || qNorm.includes('quien va')) {
+    const score = activeEval?.scoreAfter ?? liveLines?.lines[0]?.score ?? { kind: 'cp', value: 0 };
+    const cpPlayer = cpFor(score, playerColor);
+    const matPlayer = materialBalance(chessNow, playerColor);
+    const devP = development(chessNow, playerColor);
+    const devO = development(chessNow, other(playerColor));
+    const hangP = hangingPieces(chessNow, playerColor);
+
+    if (cpPlayer >= 60) {
+      const ans = `¡Buenas noticias! No es tu rival quien tiene ventaja: tú tienes ventaja con las ${playerName} (${formatScore(score, playerColor)}). ${matPlayer > 0 ? `Tienes +${matPlayer} punto(s) de ventaja material.` : 'Tus piezas están más activas y mejor coordinadas.'} Mantén la calma y evita dejar piezas sueltas.`;
+      return { question, answer: ans, spokenAnswer: ans };
+    }
+    if (cpPlayer > -55) {
+      const ans = `La posición está prácticamente equilibrada (${formatScore(score, playerColor)}). Ningún bando tiene una ventaja decisiva todavía. Quien coordine mejor sus piezas y controle el centro tomará la iniciativa.`;
+      return { question, answer: ans, spokenAnswer: ans };
+    }
+
+    const reasons: string[] = [];
+    if (matPlayer < 0) reasons.push(`tiene ventaja material de ${Math.abs(matPlayer)} punto(s)`);
+    if (hangP.length > 0) reasons.push(`tu ${pieceAt(hangP[0].type, hangP[0].square)} está bajo presión o sin defensa suficiente`);
+    if (devP.undevelopedMinors > devO.undevelopedMinors) reasons.push(`ha desarrollado más piezas menores hacia casillas activas`);
+    if (reasons.length === 0) reasons.push(`sus piezas dominan más espacio y líneas activas según el cálculo de Stockfish`);
+
+    const ans = `Tu rival tiene ventaja (${formatScore(score, playerColor)} para tus ${playerName}) porque ${reasons.join(' y ')}. Para remontar, prioriza defender tus piezas vulnerables, simplificar amenazas directas y buscar contrajuego táctico con ${activeEval?.bestSanEs ?? 'tu pieza más activa'}.`;
+    return { question, answer: ans, spokenAnswer: ans };
+  }
+
+  // 5) "¿Cómo puedo evitar este tipo de errores?"
+  if (qNorm.includes('evitar') || qNorm.includes('corregir') || qNorm.includes('no cometer')) {
+    if (activeEval) {
+      const motifNames = activeEval.motifs.map((m) => MOTIF_LABELS[m]).join(' y ');
+      const ans = `Para evitar errores de «${motifNames}»: 1) ${activeEval.whatToConsider} 2) ${activeEval.recommendation} 3) Regla de oro: ${activeEval.coachLesson}`;
+      return { question, answer: ans, spokenAnswer: ans };
+    }
+    const ans = `Para evitar errores tácticos aplica siempre la lista de verificación de 3 pasos antes de soltar la pieza: 1) ¿Qué amenaza la última jugada de mi rival? 2) ¿Dejo alguna pieza mía sin defensa al mover? 3) ¿Tengo algún jaque, captura o ataque doble mejor?`;
+    return { question, answer: ans, spokenAnswer: ans };
+  }
+
+  // 6) "¿Qué debería aprender de esta posición?"
+  if (qNorm.includes('aprender') || qNorm.includes('leccion') || qNorm.includes('ensenanza')) {
+    if (activeEval) {
+      const ans = `La lección clave de esta posición (${activeEval.phase}) es: «${activeEval.coachLesson}». En concreto, ${activeEval.whatToConsider} ${activeEval.bestAlternativeExplain}`;
+      return { question, answer: ans, spokenAnswer: ans, highlightUci: activeEval.bestUci };
+    }
+    const phaseNow = gamePhase(chessNow);
+    const ans = `En esta posición de ${phaseNow}, la enseñanza fundamental es mejorar tu pieza menos activa sin debilitar la seguridad de tu rey ni dejar piezas sin sostén.`;
+    return { question, answer: ans, spokenAnswer: ans };
+  }
+
+  // 7) "¿Cuál es el plan para las próximas jugadas?"
+  if (qNorm.includes('plan') || qNorm.includes('proximas') || qNorm.includes('siguiente') || qNorm.includes('hacer ahora')) {
+    const opening = fensHistory ? detectOpening(fensHistory) : null;
+    const phaseNow = gamePhase(chessNow);
+    const topLine = liveLines?.lines[0] ?? null;
+    const pvSans = topLine ? pvToSan(liveLines!.fen, topLine.pv, 4) : [];
+    const pvText = pvSans.length > 0 ? `La secuencia concreta que recomienda Stockfish es: ${pvSans.map((s) => localizeSan(s, 'es')).join(' → ')}.` : '';
+
+    if (phaseNow === 'apertura' && opening) {
+      const opPlan = playerColor === 'w' ? opening.planWhite : opening.planBlack;
+      const ans = `Estamos en la ${opening.name} (${opening.eco}). Tu plan estratégico con las ${playerName} es: ${opPlan} ${pvText}`;
+      return { question, answer: ans, spokenAnswer: ans, highlightUci: topLine?.pv[0] };
+    }
+    if (activeEval?.bestLine) {
+      const ans = `El plan recomendado a partir de este momento se basa en la línea principal del motor (${activeEval.bestLine.formatted}). ${activeEval.whatToConsider} ${activeEval.recommendation}`;
+      return { question, answer: ans, spokenAnswer: ans, highlightUci: activeEval.bestUci };
+    }
+    const devP = development(chessNow, playerColor);
+    const ksP = kingSafety(chessNow, playerColor);
+    const steps: string[] = [];
+    if (devP.undevelopedMinors > 0) steps.push(`completar el desarrollo de tus ${devP.undevelopedMinors} pieza(s) menor(es)`);
+    if (!ksP.castled && phaseNow !== 'final') steps.push('poner a tu rey en seguridad con el enroque');
+    steps.push('disputar las columnas centrales y presionar las piezas menos defendidas del rival');
+    const ans = `Tu plan para las próximas jugadas con las ${playerName} consiste en: ${steps.join(', ')}. ${pvText}`;
+    return { question, answer: ans, spokenAnswer: ans, highlightUci: topLine?.pv[0] };
+  }
+
+  // Respuesta general contextual para cualquier otra pregunta libre del usuario
+  if (activeEval) {
+    const ans = `Sobre la jugada ${activeEval.moveNumber} (${activeEval.playedSanEs}, ${activeEval.classification.meta.label}): ${activeEval.whatHappened} ${activeEval.bestAlternativeExplain} ${activeEval.recommendation}`;
+    return { question, answer: ans, spokenAnswer: ans, highlightUci: activeEval.bestUci };
+  }
+
+  const topUci = liveLines?.lines[0]?.pv[0];
+  const topSan = topUci ? localizeSan(uciToSan(fen, topUci), 'es') : null;
+  const ans = topSan
+    ? `En la posición actual, Stockfish valora la partida en ${formatScore(liveLines?.lines[0]?.score ?? null, playerColor)} para tus ${playerName} y recomienda considerar ${topSan} como continuación principal.`
+    : `Estamos analizando la posición con Stockfish 19. Selecciona cualquier jugada de la lista o haz un movimiento en el tablero para examinar todas sus variantes.`;
+  return { question, answer: ans, spokenAnswer: ans, highlightUci: topUci };
+}
+
 

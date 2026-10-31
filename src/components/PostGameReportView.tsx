@@ -6,11 +6,11 @@ import { isSpeechSupported } from '../coach/soundAndSpeech';
 import { EasyExplanation } from './EasyExplanation';
 
 const CATEGORY_ORDER: MoveCategory[] = [
+  'brillante',
   'excelente',
   'mejor',
-  'precisa',
   'buena',
-  'oportunidad_perdida',
+  'libro',
   'imprecision',
   'error',
   'error_grave',
@@ -25,6 +25,12 @@ export const PostGameReportView: React.FC = () => {
   const speakText = useChessStore((s) => s.speakText);
   const loadChallengePuzzle = useChessStore((s) => s.loadChallengePuzzle);
   const loadVerificationChallengeFromReport = useChessStore((s) => s.loadVerificationChallengeFromReport);
+  const startPracticeMistakesFromCurrentGame = useChessStore((s) => s.startPracticeMistakesFromCurrentGame);
+  const analyzeCurrentGameFull = useChessStore((s) => s.analyzeCurrentGameFull);
+  const cancelBatchAnalysis = useChessStore((s) => s.cancelBatchAnalysis);
+  const batchAnalysisProgress = useChessStore((s) => s.batchAnalysisProgress);
+  const moves = useChessStore((s) => s.moves);
+  const moveEvaluations = useChessStore((s) => s.moveEvaluations);
 
   if (!report) {
     return (
@@ -41,19 +47,33 @@ export const PostGameReportView: React.FC = () => {
   }
 
   const { trainingPlan } = report;
+  const analyzedCount = Object.keys(moveEvaluations).length;
+  const totalMovesCount = moves.length;
+  const canDeepAnalyze = totalMovesCount > 0 && analyzedCount < totalMovesCount;
 
   const handleJumpToMove = (ply: number) => {
     void selectPly(ply);
     setActiveTab('coach');
   };
 
+  const handleStartMistakePractice = () => {
+    void startPracticeMistakesFromCurrentGame();
+    setActiveTab('coach');
+  };
+
+  const whiteAccuracy = report.whiteStats?.accuracyPercent ?? (report.playerColor === 'w' ? report.accuracyPercent : 0);
+  const blackAccuracy = report.blackStats?.accuracyPercent ?? (report.playerColor === 'b' ? report.accuracyPercent : 0);
+  const whiteAcpl = report.whiteStats?.averageCpLoss ?? (report.playerColor === 'w' ? report.averageCpLoss : 0);
+  const blackAcpl = report.blackStats?.averageCpLoss ?? (report.playerColor === 'b' ? report.averageCpLoss : 0);
+
   return (
     <section className="panel-card report-panel" aria-label="Informe completo de la partida">
+      {/* Cabecera principal */}
       <div className="report-panel__header">
         <div>
-          <span className="eyebrow">Informe Completo de la Partida</span>
+          <span className="eyebrow">Informe de Análisis Post-Partida · Game Review</span>
           <h3>
-            Resultado: {report.result} ({report.reasonText})
+            Resultado: <span className="report-result-badge">{report.result}</span> ({report.reasonText})
           </h3>
         </div>
         <div className="btn-row">
@@ -63,7 +83,7 @@ export const PostGameReportView: React.FC = () => {
               className="btn btn--secondary btn--sm"
               onClick={() =>
                 speakText(
-                  `Resumen de la partida. Resultado ${report.result}. Tu precisión fue del ${report.accuracyPercent} por ciento, con ${report.goodMovesTotal} jugadas buenas o precisas de ${report.playerMoveCount}. Lo que hiciste bien: ${report.strengths.join('. ')}.`,
+                  `Resumen de la partida. Resultado ${report.result}. Tu precisión fue del ${report.accuracyPercent} por ciento, con ${report.goodMovesTotal} jugadas positivas de ${report.playerMoveCount}. Lo que hiciste bien: ${report.strengths.join('. ')}.`,
                 )
               }
             >
@@ -72,17 +92,36 @@ export const PostGameReportView: React.FC = () => {
           )}
           <button
             type="button"
-            className="btn btn--secondary btn--sm"
-            onClick={() => setActiveTab('lab')}
+            className="btn btn--accent btn--sm"
+            onClick={handleStartMistakePractice}
           >
             🎯 Practicar mis errores
           </button>
+          {batchAnalysisProgress ? (
+            <button
+              type="button"
+              className="btn btn--warn btn--sm"
+              onClick={cancelBatchAnalysis}
+            >
+              ⏹ Detener análisis ({batchAnalysisProgress.currentPly}/{batchAnalysisProgress.totalPlies})
+            </button>
+          ) : (
+            canDeepAnalyze && (
+              <button
+                type="button"
+                className="btn btn--secondary btn--sm"
+                onClick={() => void analyzeCurrentGameFull()}
+              >
+                🔍 Analizar con Stockfish 19 ({analyzedCount}/{totalMovesCount})
+              </button>
+            )
+          )}
           <button
             type="button"
-            className="btn btn--accent btn--sm"
+            className="btn btn--ghost btn--sm"
             onClick={() => void startNewGame({ mode: 'rematch' })}
           >
-            ⚔ Jugar revancha y comparar
+            ⚔ Jugar revancha
           </button>
           <button
             type="button"
@@ -94,20 +133,217 @@ export const PostGameReportView: React.FC = () => {
         </div>
       </div>
 
-      {/* Bloque destacado: Resumen de la partida y lo que el jugador hizo bien */}
-      <div className="coach-block coach-block--good">
-        <h4>🌟 Resumen de la partida y qué hiciste bien</h4>
-        <p>
-          Realizaste <strong>{report.goodMovesTotal}</strong> jugadas positivas (Excelentes, Mejores,
-          Precisas o Buenas) de un total de <strong>{report.playerMoveCount}</strong> turnos propios,
-          alcanzando una precisión global del <strong>{report.accuracyPercent}%</strong> (pérdida
-          media de {report.averageCpLoss} centipeones).
-        </p>
-        <ul className="bullet-list" style={{ marginTop: '0.35rem' }}>
-          {report.strengths.map((st, idx) => (
-            <li key={idx}>{st}</li>
-          ))}
-        </ul>
+      {/* Banner de progreso de análisis por lotes con Stockfish 19 */}
+      {batchAnalysisProgress && (
+        <div className="batch-analysis-banner">
+          <div className="batch-analysis-banner__info">
+            <span className="spinner-inline" />
+            <span>
+              Analizando partida completa con <strong>Stockfish 19 WASM</strong>: jugada{' '}
+              {batchAnalysisProgress.currentPly} de {batchAnalysisProgress.totalPlies}…
+            </span>
+          </div>
+          <div className="batch-analysis-banner__bar">
+            <div
+              className="batch-analysis-banner__fill"
+              style={{
+                width: `${Math.round((batchAnalysisProgress.currentPly / batchAnalysisProgress.totalPlies) * 100)}%`,
+              }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 1. Módulo Dual de Precisión (Blancas vs Negras - Estilo Chess.com / Lichess) */}
+      <div className="report-dual-overview">
+        <div className={`report-side-card ${report.playerColor === 'w' ? 'report-side-card--player' : ''}`}>
+          <div className="report-side-card__top">
+            <span className="report-side-card__icon">♔</span>
+            <div>
+              <span className="report-side-card__name">Blancas</span>
+              {report.playerColor === 'w' && <span className="pill pill--accent pill--xs">Tú</span>}
+            </div>
+          </div>
+          <div className="report-side-card__accuracy">
+            <span className="report-side-card__number">{whiteAccuracy}%</span>
+            <span className="report-side-card__label">Precisión</span>
+          </div>
+          <div className="report-side-card__stats">
+            <span>Pérdida media: <strong>{whiteAcpl} cp</strong></span>
+            <span>Aciertos: <strong>{report.whiteStats?.goodMovesTotal ?? 0} / {report.whiteStats?.moveCount ?? 0}</strong></span>
+          </div>
+        </div>
+
+        <div className="report-dual-vs">
+          <span className="report-dual-vs__pill">VS</span>
+        </div>
+
+        <div className={`report-side-card ${report.playerColor === 'b' ? 'report-side-card--player' : ''}`}>
+          <div className="report-side-card__top">
+            <span className="report-side-card__icon">♚</span>
+            <div>
+              <span className="report-side-card__name">Negras</span>
+              {report.playerColor === 'b' && <span className="pill pill--accent pill--xs">Tú</span>}
+            </div>
+          </div>
+          <div className="report-side-card__accuracy">
+            <span className="report-side-card__number">{blackAccuracy}%</span>
+            <span className="report-side-card__label">Precisión</span>
+          </div>
+          <div className="report-side-card__stats">
+            <span>Pérdida media: <strong>{blackAcpl} cp</strong></span>
+            <span>Aciertos: <strong>{report.blackStats?.goodMovesTotal ?? 0} / {report.blackStats?.moveCount ?? 0}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      {/* 2. Tabla comparativa de clasificaciones por bando (Lichess/Chess.com) */}
+      <div className="report-classification-table-card">
+        <h4>Clasificación de jugadas (Blancas vs Negras)</h4>
+        <div className="report-cat-table">
+          {CATEGORY_ORDER.map((cat) => {
+            const meta = CATEGORIES[cat];
+            const wCount = report.whiteStats?.counts[cat] ?? 0;
+            const bCount = report.blackStats?.counts[cat] ?? 0;
+            return (
+              <div key={cat} className="report-cat-row">
+                <span className="report-cat-count report-cat-count--w">{wCount}</span>
+                <div className="report-cat-badge" style={{ borderColor: meta.color }}>
+                  <span className="report-cat-badge__sym" style={{ backgroundColor: meta.color }}>
+                    {meta.symbol}
+                  </span>
+                  <span className="report-cat-badge__text">{meta.label}</span>
+                </div>
+                <span className="report-cat-count report-cat-count--b">{bCount}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. Tarjetas de momentos clave de la partida */}
+      <div className="report-highlights-grid">
+        {report.bestMoveOfGame && (
+          <div className="highlight-card highlight-card--best">
+            <div className="highlight-card__header">
+              <span className="highlight-card__icon">🌟</span>
+              <strong>Mejor jugada de la partida</strong>
+            </div>
+            <p className="highlight-card__move">
+              Jugada {report.bestMoveOfGame.moveNumber} ({report.bestMoveOfGame.mover === 'w' ? 'Blancas' : 'Negras'}):{' '}
+              <strong>{report.bestMoveOfGame.playedSanEs}</strong>
+            </p>
+            <p className="highlight-card__desc">
+              <EasyExplanation text={report.bestMoveOfGame.whatYouDidWell || report.bestMoveOfGame.whatHappened} />
+            </p>
+            <button
+              type="button"
+              className="btn btn--secondary btn--xs"
+              onClick={() => handleJumpToMove(report.bestMoveOfGame!.ply)}
+            >
+              👁 Ver jugada en el tablero
+            </button>
+          </div>
+        )}
+
+        {report.criticalMoment && (
+          <div className="highlight-card highlight-card--critical">
+            <div className="highlight-card__header">
+              <span className="highlight-card__icon">⚡</span>
+              <strong>Momento más crítico</strong>
+            </div>
+            <p className="highlight-card__move">
+              Jugada {report.criticalMoment.moveNumber} ({report.criticalMoment.mover === 'w' ? 'Blancas' : 'Negras'}):{' '}
+              <strong>{report.criticalMoment.playedSanEs}</strong>
+            </p>
+            <p className="highlight-card__desc">
+              <EasyExplanation text={report.criticalMoment.whatHappened} />
+            </p>
+            <button
+              type="button"
+              className="btn btn--secondary btn--xs"
+              onClick={() => handleJumpToMove(report.criticalMoment!.ply)}
+            >
+              👁 Ver momento crítico
+            </button>
+          </div>
+        )}
+
+        {report.mainMistake && (
+          <div className="highlight-card highlight-card--mistake">
+            <div className="highlight-card__header">
+              <span className="highlight-card__icon">⚠️</span>
+              <strong>Principal error cometido</strong>
+            </div>
+            <p className="highlight-card__move">
+              Jugada {report.mainMistake.moveNumber}: jugaste <strong>{report.mainMistake.playedSanEs}</strong> (mejor era{' '}
+              <strong>{report.mainMistake.bestSanEs}</strong>)
+            </p>
+            <p className="highlight-card__desc">
+              <EasyExplanation text={report.mainMistake.whatHappened} />
+            </p>
+            <div className="btn-row">
+              <button
+                type="button"
+                className="btn btn--secondary btn--xs"
+                onClick={() => handleJumpToMove(report.mainMistake!.ply)}
+              >
+                👁 Ver en tablero
+              </button>
+              <button
+                type="button"
+                className="btn btn--accent btn--xs"
+                onClick={handleStartMistakePractice}
+              >
+                🎯 Practicar este error
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="highlight-card highlight-card--stats">
+          <div className="highlight-card__header">
+            <span className="highlight-card__icon">📊</span>
+            <strong>Estadísticas de la partida</strong>
+          </div>
+          <ul className="stats-mini-list">
+            <li>
+              <span>Apertura / Teoría:</span>
+              <strong>{report.openingMovesCount ?? 0} jugadas</strong>
+            </li>
+            <li>
+              <span>Movimientos tácticos:</span>
+              <strong>{report.tacticalMovesCount ?? 0} jugadas</strong>
+            </li>
+            <li>
+              <span>Apertura jugada:</span>
+              <strong>{report.opening ? `${report.opening.eco} · ${report.opening.name}` : 'Esquema libre'}</strong>
+            </li>
+            <li>
+              <span>Total de turnos completos:</span>
+              <strong>{report.totalFullMoves} jugadas</strong>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      {/* Banner de invitación a practicar errores */}
+      <div className="practice-mistakes-banner">
+        <div className="practice-mistakes-banner__content">
+          <span className="eyebrow">Entrenamiento con tus propios fallos</span>
+          <h4>🎯 Practica tus errores en el tablero interactivo</h4>
+          <p>
+            El entrenador ha convertido las jugadas imprecisas y erróneas de esta partida en ejercicios tácticos.
+            Intenta resolver cada posición moviendo las piezas sobre el tablero para encontrar la mejor alternativa calculada por Stockfish.
+          </p>
+        </div>
+        <button
+          type="button"
+          className="btn btn--accent btn--lg"
+          onClick={handleStartMistakePractice}
+        >
+          🎯 Comenzar práctica de errores →
+        </button>
       </div>
 
       {/* Gráfico interactivo de ventaja de toda la partida */}
@@ -120,7 +356,9 @@ export const PostGameReportView: React.FC = () => {
           <div className="rematch-metrics">
             <div>
               <span>Resultado anterior → actual:</span>
-              <strong>{rematchComparison.previousResult} → {report.result}</strong>
+              <strong>
+                {rematchComparison.previousResult} → {report.result}
+              </strong>
             </div>
             <div>
               <span>Precisión:</span>
@@ -132,58 +370,31 @@ export const PostGameReportView: React.FC = () => {
             </div>
             <div>
               <span>Pérdida media (ACPL):</span>
-              <strong>{rematchComparison.previousAcpl} cp → {report.averageCpLoss} cp</strong>
+              <strong>
+                {rematchComparison.previousAcpl} cp → {report.averageCpLoss} cp
+              </strong>
             </div>
           </div>
         </div>
       )}
 
-      {/* Métricas principales */}
-      <div className="report-kpis">
-        <div className="kpi-card">
-          <span className="kpi-card__label">Desempeño (Precisión)</span>
-          <strong className="kpi-card__value">{report.accuracyPercent}%</strong>
-          <small>ACPL: {report.averageCpLoss} cp</small>
-        </div>
-        <div className="kpi-card">
-          <span className="kpi-card__label">Movimientos totales</span>
-          <strong className="kpi-card__value">{report.totalFullMoves}</strong>
-          <small>{report.playerMoveCount} jugadas tuyas ({report.goodMovesTotal} buenas/precisas)</small>
-        </div>
-        <div className="kpi-card kpi-card--wide">
-          <span className="kpi-card__label">Apertura identificada</span>
-          <strong className="kpi-card__value">
-            {report.opening ? `${report.opening.eco} · ${report.opening.name}` : 'Esquema libre / Posición personalizada'}
-          </strong>
-          {report.opening && (
-            <small>
-              Plan clave: {report.playerColor === 'w' ? report.opening.planWhite : report.opening.planBlack}
-            </small>
-          )}
-        </div>
+      {/* Bloque destacado: Resumen de la partida y qué hiciste bien */}
+      <div className="coach-block coach-block--good">
+        <h4>🌟 Resumen de tu actuación</h4>
+        <p>
+          Realizaste <strong>{report.goodMovesTotal}</strong> jugadas positivas de un total de{' '}
+          <strong>{report.playerMoveCount}</strong> turnos propios con tus{' '}
+          <strong>{report.playerColor === 'w' ? 'Blancas' : 'Negras'}</strong>, alcanzando una precisión global del{' '}
+          <strong>{report.accuracyPercent}%</strong> (pérdida media de {report.averageCpLoss} centipeones).
+        </p>
+        <ul className="bullet-list" style={{ marginTop: '0.35rem' }}>
+          {report.strengths.map((st, idx) => (
+            <li key={idx}>{st}</li>
+          ))}
+        </ul>
       </div>
 
       <p className="engine-disclaimer">{report.methodologyNote}</p>
-
-      {/* Desglose por categorías de jugadas */}
-      <div className="report-section">
-        <h4>Clasificación de tus movimientos</h4>
-        <div className="category-counts-grid">
-          {CATEGORY_ORDER.map((cat) => {
-            const meta = CATEGORIES[cat];
-            const n = report.counts[cat];
-            return (
-              <div key={cat} className="cat-count-chip">
-                <span className="cat-count-chip__dot" style={{ backgroundColor: meta.color }}>
-                  {meta.symbol}
-                </span>
-                <span className="cat-count-chip__label">{meta.label}</span>
-                <strong className="cat-count-chip__num">{n}</strong>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* Mejores jugadas, errores decisivos, oportunidades perdidas y momentos clave */}
       <div className="report-two-col">
@@ -201,12 +412,15 @@ export const PostGameReportView: React.FC = () => {
                     onClick={() => handleJumpToMove(ev.ply)}
                   >
                     <strong>
-                      {ev.moveNumber}{ev.mover === 'w' ? '.' : '...'} {ev.playedSanEs}
+                      {ev.moveNumber}
+                      {ev.mover === 'w' ? '.' : '...'} {ev.playedSanEs}
                     </strong>{' '}
                     <span style={{ color: ev.classification.meta.color }}>
                       ({ev.classification.meta.label})
                     </span>
-                    <p><EasyExplanation text={ev.whatYouDidWell} /></p>
+                    <p>
+                      <EasyExplanation text={ev.whatYouDidWell} />
+                    </p>
                   </button>
                 </li>
               ))}
@@ -228,12 +442,15 @@ export const PostGameReportView: React.FC = () => {
                     onClick={() => handleJumpToMove(ev.ply)}
                   >
                     <strong>
-                      {ev.moveNumber}{ev.mover === 'w' ? '.' : '...'} {ev.playedSanEs}
+                      {ev.moveNumber}
+                      {ev.mover === 'w' ? '.' : '...'} {ev.playedSanEs}
                     </strong>{' '}
                     <span style={{ color: ev.classification.meta.color }}>
                       ({ev.classification.meta.label} · mejor era {ev.bestSanEs})
                     </span>
-                    <p><EasyExplanation text={ev.whatHappened} /></p>
+                    <p>
+                      <EasyExplanation text={ev.whatHappened} />
+                    </p>
                   </button>
                 </li>
               ))}
@@ -259,7 +476,9 @@ export const PostGameReportView: React.FC = () => {
                     <strong>
                       Jugada {ev.moveNumber}: jugaste {ev.playedSanEs} en lugar de {ev.bestSanEs}
                     </strong>
-                    <p><EasyExplanation text={ev.bestAlternativeExplain} /></p>
+                    <p>
+                      <EasyExplanation text={ev.bestAlternativeExplain} />
+                    </p>
                   </button>
                 </li>
               ))}
@@ -283,7 +502,9 @@ export const PostGameReportView: React.FC = () => {
                     <strong>
                       Turno {ev.moveNumber} ({ev.playedSanEs}): {ev.deltaText}
                     </strong>
-                    <p><EasyExplanation text={ev.whatHappened} /></p>
+                    <p>
+                      <EasyExplanation text={ev.whatHappened} />
+                    </p>
                   </button>
                 </li>
               ))}
@@ -312,7 +533,7 @@ export const PostGameReportView: React.FC = () => {
         </div>
       </div>
 
-      {/* SISTEMA DE APRENDIZAJE PERSONALIZADO (Sección 10) */}
+      {/* SISTEMA DE APRENDIZAJE PERSONALIZADO */}
       <div className="training-plan-box">
         <div className="training-plan-box__header">
           <span className="eyebrow">Sistema de Aprendizaje Personalizado</span>
@@ -396,4 +617,3 @@ export const PostGameReportView: React.FC = () => {
     </section>
   );
 };
-

@@ -45,6 +45,15 @@ export interface TrainingPlan {
   verificationChallenge: VerificationChallenge;
 }
 
+export interface SideStats {
+  color: Color;
+  moveCount: number;
+  counts: CategoryCounts;
+  goodMovesTotal: number;
+  accuracyPercent: number;
+  averageCpLoss: number;
+}
+
 export interface PostGameReport {
   result: '1-0' | '0-1' | '1/2-1/2';
   outcomeForPlayer: 'win' | 'loss' | 'draw';
@@ -55,12 +64,25 @@ export interface PostGameReport {
   totalFullMoves: number;
   playerMoveCount: number;
   counts: CategoryCounts;
-  /** Suma de jugadas positivas (excelente + mejor + precisa + buena). */
+  /** Suma de jugadas positivas (brillante + excelente + mejor + precisa + buena + libro). */
   goodMovesTotal: number;
   /** Precisión media (0–100 %) calculada sobre la caída de probabilidad de victoria por jugada. */
   accuracyPercent: number;
   /** Pérdida media en centipeones (ACPL). */
   averageCpLoss: number;
+  /** Estadísticas completas de Blancas y Negras (Sección 7). */
+  whiteStats?: SideStats;
+  blackStats?: SideStats;
+  /** Número de jugadas de apertura / teoría realizadas en la partida. */
+  openingMovesCount?: number;
+  /** Número de jugadas tácticas identificadas en la partida. */
+  tacticalMovesCount?: number;
+  /** Momento más crítico de toda la partida. */
+  criticalMoment?: MoveEvaluation | null;
+  /** Principal error cometido en la partida. */
+  mainMistake?: MoveEvaluation | null;
+  /** Mejor movimiento de la partida. */
+  bestMoveOfGame?: MoveEvaluation | null;
   methodologyNote: string;
   bestMoves: MoveEvaluation[];
   criticalMistakes: MoveEvaluation[];
@@ -178,40 +200,78 @@ export function buildPostGameReport(input: BuildReportInput): PostGameReport {
   const opening = detectOpening(fens);
   const playerEvals = evaluations.filter((e) => e.mover === playerColor);
 
-  const counts: CategoryCounts = {
+  const emptyCategoryCounts = (): CategoryCounts => ({
+    brillante: 0,
     excelente: 0,
     mejor: 0,
     precisa: 0,
     buena: 0,
+    libro: 0,
     oportunidad_perdida: 0,
     imprecision: 0,
     error: 0,
     error_grave: 0,
+  });
+
+  const buildSideStats = (side: Color): SideStats => {
+    const sideEvals = evaluations.filter((e) => e.mover === side);
+    const c = emptyCategoryCounts();
+    for (const e of sideEvals) {
+      c[e.category] = (c[e.category] ?? 0) + 1;
+    }
+    const good = c.brillante + c.excelente + c.mejor + c.precisa + c.buena + c.libro;
+    const acc =
+      sideEvals.length > 0
+        ? Math.round(sideEvals.reduce((sum, e) => sum + e.classification.moveAccuracy, 0) / sideEvals.length)
+        : 100;
+    const acpl =
+      sideEvals.length > 0
+        ? Math.round(sideEvals.reduce((sum, e) => sum + e.cpLoss, 0) / sideEvals.length)
+        : 0;
+    return {
+      color: side,
+      moveCount: sideEvals.length,
+      counts: c,
+      goodMovesTotal: good,
+      accuracyPercent: acc,
+      averageCpLoss: acpl,
+    };
   };
-  for (const e of playerEvals) counts[e.category]++;
 
-  const goodMovesTotal = counts.excelente + counts.mejor + counts.precisa + counts.buena;
+  const whiteStats = buildSideStats('w');
+  const blackStats = buildSideStats('b');
+  const playerSideStats = playerColor === 'w' ? whiteStats : blackStats;
 
-  const accuracyPercent =
-    playerEvals.length > 0
-      ? Math.round(playerEvals.reduce((acc, e) => acc + e.classification.moveAccuracy, 0) / playerEvals.length)
-      : 100;
+  const counts: CategoryCounts = playerSideStats.counts;
+  const goodMovesTotal = playerSideStats.goodMovesTotal;
+  const accuracyPercent = playerSideStats.accuracyPercent;
+  const averageCpLoss = playerSideStats.averageCpLoss;
 
-  const averageCpLoss =
-    playerEvals.length > 0
-      ? Math.round(playerEvals.reduce((acc, e) => acc + e.cpLoss, 0) / playerEvals.length)
-      : 0;
+  const openingMovesCount = evaluations.filter((e) => e.phase === 'apertura' || e.category === 'libro').length;
+  const tacticalMotifs: MotifId[] = [
+    'pieza_indefensa',
+    'amenaza_ignorada',
+    'ataque_doble',
+    'clavada',
+    'descubierta',
+    'sobrecarga_desviacion',
+    'sacrificio',
+  ];
+  const tacticalMovesCount = evaluations.filter(
+    (e) => e.motifs.some((m) => tacticalMotifs.includes(m)) || (e.tacticalObservations?.length ?? 0) > 0,
+  ).length;
 
   const methodologyNote =
     'La precisión (0–100 %) mide cuánto conservaste la expectativa de victoria según Stockfish en cada turno, ' +
     'y la pérdida media (ACPL) promedia los centipeones cedidos respecto a la mejor jugada del motor. ' +
     'Son indicadores de calidad de movimiento en esta partida concreta, NO un Elo oficial.';
 
-  // Mejores jugadas del jugador (priorizando Excelentes y Mejores con ganancia o en posiciones complejas).
+  // Mejores jugadas del jugador (priorizando Brillantes, Excelentes y Mejores con ganancia o en posiciones complejas).
   const bestMoves = [...playerEvals]
     .filter((e) => e.classification.meta.isPositive)
     .sort((a, b) => {
-      const rank = (c: MoveCategory) => (c === 'excelente' ? 4 : c === 'mejor' ? 3 : c === 'precisa' ? 2 : 1);
+      const rank = (c: MoveCategory) =>
+        c === 'brillante' ? 5 : c === 'excelente' ? 4 : c === 'mejor' ? 3 : c === 'precisa' ? 2 : 1;
       return rank(b.category) - rank(a.category) || a.cpLoss - b.cpLoss;
     })
     .slice(0, 3);
@@ -399,6 +459,14 @@ export function buildPostGameReport(input: BuildReportInput): PostGameReport {
     };
   }
 
+  const allBestRanked = [...evaluations]
+    .filter((e) => e.classification.meta.isPositive)
+    .sort((a, b) => {
+      const rank = (c: MoveCategory) =>
+        c === 'brillante' ? 5 : c === 'excelente' ? 4 : c === 'mejor' ? 3 : c === 'precisa' ? 2 : 1;
+      return rank(b.category) - rank(a.category) || a.cpLoss - b.cpLoss;
+    });
+
   return {
     result,
     outcomeForPlayer,
@@ -412,6 +480,13 @@ export function buildPostGameReport(input: BuildReportInput): PostGameReport {
     goodMovesTotal,
     accuracyPercent,
     averageCpLoss,
+    whiteStats,
+    blackStats,
+    openingMovesCount,
+    tacticalMovesCount,
+    criticalMoment: decisiveMoments[0] ?? null,
+    mainMistake: criticalMistakes[0] ?? null,
+    bestMoveOfGame: bestMoves[0] ?? allBestRanked[0] ?? null,
     methodologyNote,
     bestMoves,
     criticalMistakes,

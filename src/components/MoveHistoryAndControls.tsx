@@ -16,6 +16,7 @@ export const BoardQuickControls: React.FC = () => {
   const variant = useChessStore((s) => s.variant);
   const focusBoardMode = useChessStore((s) => s.focusBoardMode);
   const boardTheme = useChessStore((s) => s.boardTheme);
+  const isAutoPlaying = useChessStore((s) => s.isAutoPlaying);
 
   const selectPly = useChessStore((s) => s.selectPly);
   const startNewGame = useChessStore((s) => s.startNewGame);
@@ -27,6 +28,7 @@ export const BoardQuickControls: React.FC = () => {
   const flipBoard = useChessStore((s) => s.flipBoard);
   const toggleFocusBoardMode = useChessStore((s) => s.toggleFocusBoardMode);
   const cycleBoardTheme = useChessStore((s) => s.cycleBoardTheme);
+  const toggleAutoPlay = useChessStore((s) => s.toggleAutoPlay);
 
   const boardThemeLabel: Record<'emerald' | 'wood' | 'midnight' | 'ocean', string> = {
     emerald: 'Esmeralda',
@@ -79,6 +81,16 @@ export const BoardQuickControls: React.FC = () => {
         >
           ⏭
         </button>
+        {moves.length > 0 && (
+          <button
+            type="button"
+            className={`btn ${isAutoPlaying ? 'btn--accent' : 'btn--ghost'} btn--xs auto-play-btn`}
+            onClick={toggleAutoPlay}
+            title={isAutoPlaying ? 'Pausar reproducción automática' : 'Reproducir automáticamente toda la partida'}
+          >
+            {isAutoPlaying ? '⏸ Pausa' : '▶ Auto'}
+          </button>
+        )}
       </div>
 
       <div className="board-toolbar__actions">

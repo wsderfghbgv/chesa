@@ -14,10 +14,11 @@ import {
   findPins,
   forkFrom,
 } from '../src/chess/features';
-import { detectOpening } from '../src/chess/openings';
+import { detectOpening, isKnownBookPosition } from '../src/chess/openings';
 import { classifyMove } from '../src/coach/classify';
-import { buildMoveEvaluation } from '../src/coach/explain';
+import { buildMoveEvaluation, answerCoachQuestion } from '../src/coach/explain';
 import { buildPostGameReport } from '../src/coach/postGame';
+import { chessTextToNaturalSpanishSpeech } from '../src/coach/soundAndSpeech';
 import { PUZZLES } from '../src/coach/puzzles';
 import {
   OPENING_REPERTOIRE,
@@ -350,5 +351,54 @@ describe('Reglas oficiales del ajedrez, evaluación jugada a jugada y entrenador
     expect(textTranslated).toContain('Caballo moviendo a f3');
     expect(textTranslated).toContain('Enroque corto');
     expect(textTranslated).toContain('Alfil capturando en f7 dando jaque');
+  });
+
+  it('clasifica movimientos de teoría (libro) y brillantez, y calcula estadísticas duales de blancas y negras', () => {
+    // 1. Detección de libro de aperturas
+    const bookRuy = isKnownBookPosition('r1bqkbnr/pppp1ppp/2n5/1B2p3/4P3/5N2/PPPP1PPP/RNBQK2R b KQkq - 3 3');
+    expect(bookRuy).not.toBeNull();
+    expect(bookRuy?.name).toContain('Ruy López');
+
+    // 2. Clasificación Libro
+    const bookClass = classifyMove({
+      playedUci: 'e7e5',
+      scoreBefore: { type: 'cp', value: 20 },
+      scoreAfter: { type: 'cp', value: 20 },
+      linesBefore: [{ multipv: 1, depth: 10, pv: ['e7e5'], score: { type: 'cp', value: 20 } }],
+      mover: 'b',
+      isBookMove: true,
+    });
+    expect(bookClass.category).toBe('libro');
+    expect(bookClass.meta.symbol).toBe('📖');
+
+    // 3. Clasificación Brillante
+    const brilliantClass = classifyMove({
+      playedUci: 'd1h5',
+      scoreBefore: { type: 'cp', value: 0 },
+      scoreAfter: { type: 'cp', value: 250 },
+      linesBefore: [
+        { multipv: 1, depth: 12, pv: ['d1h5'], score: { type: 'cp', value: 250 } },
+        { multipv: 2, depth: 12, pv: ['g1f3'], score: { type: 'cp', value: 40 } },
+      ],
+      mover: 'w',
+      isBrillianceCandidate: true,
+    });
+    expect(brilliantClass.category).toBe('brillante');
+    expect(brilliantClass.meta.symbol).toBe('!!');
+
+    // 4. Fonética natural en español para síntesis de voz (TTS)
+    const spoken = chessTextToNaturalSpanishSpeech('Jugaste Cf3 y luego Dxd5+ con O-O (+1.45 cp).');
+    expect(spoken).toContain('caballo f 3');
+    expect(spoken).toContain('dama por d 5, jaque');
+    expect(spoken).toContain('enroque corto');
+
+    // 5. Preguntas interactivas al profesor (Q&A)
+    const qa = answerCoachQuestion({
+      question: '¿Por qué mi jugada fue un error?',
+      playerColor: 'w',
+      fen: START_FEN,
+    });
+    expect(qa.answer.length).toBeGreaterThan(10);
+    expect(qa.spokenAnswer.length).toBeGreaterThan(10);
   });
 });

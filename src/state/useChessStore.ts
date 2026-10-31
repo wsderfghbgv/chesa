@@ -44,7 +44,10 @@ import {
 } from '../coach/classify';
 import {
   buildMoveEvaluation,
+  answerCoachQuestion,
   type ExplanationLevel,
+  type ExplanationDepth,
+  type CoachTeachingMode,
   type MoveEvaluation,
   type MotifId,
 } from '../coach/explain';
@@ -150,12 +153,14 @@ export interface ChessStoreState {
   opponentLevelId: string;
   analysisDepth: number;
   explanationLevel: ExplanationLevel;
+  explanationDepth: ExplanationDepth;
+  coachTeachingMode: CoachTeachingMode;
   thresholds: ClassificationThresholds;
   clockEnabled: boolean;
   clockInitialMinutes: number;
   clockIncrementSeconds: number;
 
-  // Audio, Voz y «Pregunta antes de Mover»
+  // Audio, Voz, Conversación con el Profesor y «Pregunta antes de Mover»
   soundEnabled: boolean;
   voiceEnabled: boolean;
   thinkingCheckEnabled: boolean;
@@ -163,6 +168,17 @@ export interface ChessStoreState {
     question: ThinkingCheckQuestion;
     selectedOptionId: string | null;
   } | null;
+  coachQaHistory: Array<{
+    id: string;
+    ply: number;
+    question: string;
+    answer: string;
+    highlightUci?: string;
+    timestamp: string;
+  }>;
+  isAutoPlaying: boolean;
+  mistakePracticeQueue: CoachingPuzzle[];
+  mistakePracticeIndex: number;
 
   // Entrenador de Aperturas (Repetición Espaciada) y Laboratorio de Finales
   activeOpeningTrainer: OpeningTrainerSession | null;
@@ -249,6 +265,8 @@ export interface ChessStoreState {
   setOpponentLevel: (id: string) => void;
   setAnalysisDepth: (depth: number) => void;
   setExplanationLevel: (lvl: ExplanationLevel) => void;
+  setExplanationDepth: (depth: ExplanationDepth) => void;
+  setCoachTeachingMode: (mode: CoachTeachingMode) => void;
   setThresholds: (th: Partial<ClassificationThresholds>) => void;
   setClockConfig: (enabled: boolean, minutes: number, incrementSec: number) => void;
   toggleVisualOption: (opt: 'showVisualAids' | 'showBestMoveArrow' | 'showThreatArrows') => void;
@@ -262,8 +280,12 @@ export interface ChessStoreState {
   toggleVoice: () => void;
   toggleThinkingCheck: () => void;
   answerThinkingCheck: (optionId: string) => void;
+  askCoachQuestion: (question: string) => void;
+  clearCoachQaHistory: () => void;
   speakText: (text: string) => void;
   stopSpeech: () => void;
+  toggleAutoPlay: () => void;
+  stopAutoPlay: () => void;
   flipBoard: () => void;
 
   startNewGame: (opts?: {
@@ -287,7 +309,11 @@ export interface ChessStoreState {
   startEndgameDrill: (drill: EndgameDrill) => Promise<void>;
   exitEndgameDrill: () => Promise<void>;
   practicePersonalMistake: (mistake: PersonalMistakeRecord) => Promise<void>;
+  startPracticeMistakesFromCurrentGame: () => Promise<void>;
+  nextPracticeMistakeInQueue: () => Promise<void>;
   analyzeSavedGameWithStockfish: (gameId: string) => Promise<void>;
+  analyzeCurrentGameFull: () => Promise<void>;
+  cancelBatchAnalysis: () => void;
 
   // Navegación del historial y explorador de variantes
   selectPly: (ply: number) => Promise<void>;
@@ -322,6 +348,8 @@ interface PersistedSessionSnapshot {
   opponentLevelId: string;
   analysisDepth: number;
   explanationLevel: ExplanationLevel;
+  explanationDepth?: ExplanationDepth;
+  coachTeachingMode?: CoachTeachingMode;
   thresholds: ClassificationThresholds;
   clockEnabled: boolean;
   clockInitialMinutes: number;
@@ -409,6 +437,8 @@ export function savePersistedSession(state: ChessStoreState): void {
       opponentLevelId: state.opponentLevelId,
       analysisDepth: state.analysisDepth,
       explanationLevel: state.explanationLevel,
+      explanationDepth: state.explanationDepth,
+      coachTeachingMode: state.coachTeachingMode,
       thresholds: state.thresholds,
       clockEnabled: state.clockEnabled,
       clockInitialMinutes: state.clockInitialMinutes,
@@ -475,6 +505,8 @@ const initialTheme = (): 'dark' | 'light' => {
 };
 
 const restoredSession = loadPersistedSession();
+let autoPlayTimer: ReturnType<typeof setTimeout> | null = null;
+let isBatchCancelled = false;
 
 export const useChessStore = create<ChessStoreState>((set, get) => ({
   theme: initialTheme(),
@@ -486,15 +518,21 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   opponentLevelId: restoredSession.opponentLevelId ?? LEVELS[2].id, // Intermedio por defecto
   analysisDepth: restoredSession.analysisDepth ?? 13,
   explanationLevel: restoredSession.explanationLevel ?? 'intermedio',
+  explanationDepth: restoredSession.explanationDepth ?? 'normal',
+  coachTeachingMode: restoredSession.coachTeachingMode ?? (restoredSession.voiceEnabled ? 'auto' : 'on_demand'),
   thresholds: restoredSession.thresholds ?? { ...DEFAULT_THRESHOLDS },
   clockEnabled: restoredSession.clockEnabled ?? false,
   clockInitialMinutes: restoredSession.clockInitialMinutes ?? 10,
   clockIncrementSeconds: restoredSession.clockIncrementSeconds ?? 5,
 
   soundEnabled: restoredSession.soundEnabled ?? true,
-  voiceEnabled: restoredSession.voiceEnabled ?? false,
+  voiceEnabled: restoredSession.voiceEnabled ?? (restoredSession.coachTeachingMode === 'auto'),
   thinkingCheckEnabled: restoredSession.thinkingCheckEnabled ?? false,
   activeThinkingCheck: restoredSession.activeThinkingCheck ?? null,
+  coachQaHistory: [],
+  isAutoPlaying: false,
+  mistakePracticeQueue: [],
+  mistakePracticeIndex: 0,
 
   activeOpeningTrainer: restoredSession.activeOpeningTrainer ?? null,
   openingSrMap: loadOpeningSrMap(),
@@ -638,6 +676,19 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
 
   setExplanationLevel: (lvl) => set({ explanationLevel: lvl }),
 
+  setExplanationDepth: (depth) => set({ explanationDepth: depth }),
+
+  setCoachTeachingMode: (mode) => {
+    if (mode === 'silent') {
+      stopCoachSpeech();
+      set({ coachTeachingMode: mode, voiceEnabled: false });
+    } else if (mode === 'auto') {
+      set({ coachTeachingMode: mode, voiceEnabled: true });
+    } else {
+      set({ coachTeachingMode: mode, voiceEnabled: false });
+    }
+  },
+
   setThresholds: (th) => set((s) => ({ thresholds: { ...s.thresholds, ...th } })),
 
   setClockConfig: (enabled, minutes, incrementSec) => {
@@ -712,12 +763,107 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     set({ activeThinkingCheck: { ...cur, selectedOptionId: optionId } });
   },
 
+  askCoachQuestion: (question: string) => {
+    const s = get();
+    const ply = s.viewingPly;
+    const fen = s.fens[ply] ?? s.startFen;
+    const activeEval = s.moveEvaluations[ply] ?? null;
+    const liveLines = s.liveLines ?? s.posAnalysisByPly[ply] ?? null;
+    const resp = answerCoachQuestion({
+      question,
+      fen,
+      playerColor: s.playerColor,
+      level: s.explanationLevel,
+      activeEval,
+      liveLines,
+      fensHistory: s.fens.slice(0, ply + 1),
+    });
+
+    const entry = {
+      id: `qa-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      ply,
+      question,
+      answer: resp.answer,
+      highlightUci: resp.highlightUci,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    };
+
+    set((prev) => ({
+      coachQaHistory: [entry, ...prev.coachQaHistory].slice(0, 30),
+    }));
+
+    if (resp.highlightUci) {
+      const p = parseUci(resp.highlightUci);
+      set({
+        customHighlightShapes: [
+          { orig: p.from, dest: p.to, brush: 'green' },
+          { orig: p.from, brush: 'yellow' },
+        ],
+      });
+    }
+
+    if (s.coachTeachingMode !== 'silent') {
+      speakCoachExplanation(resp.spokenAnswer);
+    } else {
+      speakCoachExplanation(resp.spokenAnswer, { silentOnly: true });
+    }
+  },
+
+  clearCoachQaHistory: () => set({ coachQaHistory: [] }),
+
   speakText: (text) => {
     speakCoachExplanation(text);
   },
 
   stopSpeech: () => {
     stopCoachSpeech();
+  },
+
+  stopAutoPlay: () => {
+    if (autoPlayTimer) {
+      clearTimeout(autoPlayTimer);
+      autoPlayTimer = null;
+    }
+    set({ isAutoPlaying: false });
+  },
+
+  toggleAutoPlay: () => {
+    const cur = get();
+    if (cur.isAutoPlaying) {
+      cur.stopAutoPlay();
+      return;
+    }
+    if (cur.moves.length === 0) return;
+
+    set({ isAutoPlaying: true });
+    let startPly = cur.viewingPly;
+    if (startPly >= cur.moves.length) {
+      void cur.selectPly(0);
+    }
+
+    const step = async () => {
+      const state = get();
+      if (!state.isAutoPlaying) return;
+
+      const nextPly = state.viewingPly + 1;
+      if (nextPly > state.moves.length) {
+        state.stopAutoPlay();
+        return;
+      }
+
+      await state.selectPly(nextPly);
+
+      if (!get().isAutoPlaying) return;
+
+      const delay = state.coachTeachingMode === 'silent' ? 2400 : 3600;
+      autoPlayTimer = setTimeout(() => {
+        void step();
+      }, delay);
+    };
+
+    autoPlayTimer = setTimeout(() => {
+      void step();
+    }, 1200);
   },
 
   flipBoard: () => set((s) => ({ orientation: other(s.orientation) })),
@@ -1082,6 +1228,158 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     await get().loadChallengePuzzle(syntheticPuzzle);
   },
 
+  startPracticeMistakesFromCurrentGame: async () => {
+    const s = get();
+    const mistakes = Object.values(s.moveEvaluations)
+      .filter((e) => e.mover === s.playerColor && e.classification.meta.isMistake && e.bestUci !== e.playedUci)
+      .sort((a, b) => b.effectiveLossCp - a.effectiveLossCp);
+
+    if (mistakes.length === 0) {
+      set({ statusBanner: '¡No hay errores registrados en esta partida para practicar!' });
+      return;
+    }
+
+    const puzzles: CoachingPuzzle[] = mistakes.map((ev, idx) => ({
+      id: `game-mistake-${ev.ply}-${idx}`,
+      title: `Error en jugada ${ev.moveNumber} (jugaste ${ev.playedSanEs})`,
+      motif: ev.motifs[0] ?? 'pieza_indefensa',
+      difficulty: ev.category === 'error_grave' ? 'avanzado' : 'intermedio',
+      fen: ev.fenBefore,
+      playerColor: ev.mover,
+      solutionUci: [ev.bestUci, ...ev.classification.equallyGoodUcis],
+      prompt: `En la jugada ${ev.moveNumber} con tus ${ev.mover === 'w' ? 'Blancas' : 'Negras'} jugaste ${ev.playedSanEs} (${ev.classification.meta.label}). Encuentra sobre el tablero la mejor alternativa de Stockfish.`,
+      hint: ev.recommendation,
+      explanation: ev.bestAlternativeExplain,
+      conceptToStudy: ev.coachLesson,
+    }));
+
+    set({
+      mode: 'find_best',
+      activeTab: 'coach',
+      mistakePracticeQueue: puzzles,
+      mistakePracticeIndex: 0,
+      activeOpeningTrainer: null,
+      activeEndgameDrill: null,
+      activePersonalMistakeId: null,
+    });
+    await get().loadChallengePuzzle(puzzles[0]);
+  },
+
+  nextPracticeMistakeInQueue: async () => {
+    const s = get();
+    const nextIdx = s.mistakePracticeIndex + 1;
+    if (nextIdx < s.mistakePracticeQueue.length) {
+      set({ mistakePracticeIndex: nextIdx });
+      await get().loadChallengePuzzle(s.mistakePracticeQueue[nextIdx]);
+    } else {
+      set({
+        mistakePracticeQueue: [],
+        mistakePracticeIndex: 0,
+        statusBanner: '🎉 ¡Has completado todos los ejercicios de tus errores de la partida!',
+      });
+    }
+  },
+
+  cancelBatchAnalysis: () => {
+    isBatchCancelled = true;
+    void getEngines().then(({ analysis }) => {
+      analysis.cancelTag('batch-analysis');
+    });
+    set({ batchAnalysisProgress: null, isAnalyzingMove: false });
+  },
+
+  analyzeCurrentGameFull: async () => {
+    const s = get();
+    const totalPlies = s.moves.length;
+    if (totalPlies === 0 || s.batchAnalysisProgress) return;
+
+    isBatchCancelled = false;
+    set({
+      batchAnalysisProgress: { gameId: 'current', currentPly: 0, totalPlies },
+      statusBanner: `Analizando partida completa con Stockfish 19 (0 / ${totalPlies} plies)…`,
+    });
+
+    try {
+      const { analysis } = await getEngines();
+      const depth = Math.min(14, Math.max(9, s.analysisDepth));
+      const posCache: Record<number, AnalysisResult> = { ...s.posAnalysisByPly };
+
+      const analyzePlyFen = async (plyIndex: number): Promise<AnalysisResult> => {
+        if (posCache[plyIndex]) return posCache[plyIndex];
+        const res = await analysis.analyze(
+          { fen: s.fens[plyIndex], depth, multipv: 3 },
+          { priority: 7, tag: 'batch-analysis' },
+        );
+        posCache[plyIndex] = res;
+        return res;
+      };
+
+      const evalsMap: Record<number, MoveEvaluation> = { ...s.moveEvaluations };
+      for (let i = 0; i < totalPlies; i++) {
+        if (isBatchCancelled) break;
+        const ply = i + 1;
+        set({
+          batchAnalysisProgress: { gameId: 'current', currentPly: ply, totalPlies },
+          statusBanner: `Analizando jugada ${ply}/${totalPlies} con Stockfish 19…`,
+        });
+
+        const fenBefore = s.fens[i];
+        const fenAfter = s.fens[i + 1];
+        const analysisBefore = await analyzePlyFen(i);
+        const analysisAfter = await analyzePlyFen(i + 1);
+
+        const ev = buildMoveEvaluation({
+          ply,
+          fenBefore,
+          fenAfter,
+          playedUci: s.moves[i].uci,
+          analysisBefore,
+          analysisAfter,
+          level: get().explanationLevel,
+          thresholds: get().thresholds,
+          thinkTimeMs: s.moves[i].thinkTimeMs,
+          fensHistory: s.fens.slice(0, ply + 1),
+        });
+        evalsMap[ply] = ev;
+      }
+
+      if (isBatchCancelled) {
+        set({ batchAnalysisProgress: null });
+        return;
+      }
+
+      const evalsOrdered = Object.values(evalsMap).sort((a, b) => a.ply - b.ply);
+      const histMotifs: Partial<Record<MotifId, number>> = {};
+      for (const item of get().playerStats.recurringTacticalIssues) {
+        histMotifs[item.motif] = item.count;
+      }
+
+      const winner = s.winner ?? null;
+      const resStr = resultString(winner);
+      const report = buildPostGameReport({
+        result: resStr,
+        reasonText: s.statusBanner || 'Partida analizada con Stockfish 19',
+        playerColor: s.playerColor,
+        fens: s.fens,
+        evaluations: evalsOrdered,
+        historicalMistakeMotifs: histMotifs,
+      });
+
+      set({
+        batchAnalysisProgress: null,
+        posAnalysisByPly: posCache,
+        moveEvaluations: evalsMap,
+        postGameReport: report,
+        statusBanner: `Análisis completo terminado · Precisión Blancas: ${report.whiteStats?.accuracyPercent}% | Negras: ${report.blackStats?.accuracyPercent}%`,
+      });
+    } catch {
+      set({
+        batchAnalysisProgress: null,
+        statusBanner: 'El análisis de la partida se interrumpió.',
+      });
+    }
+  },
+
   analyzeSavedGameWithStockfish: async (gameId) => {
     const game = get().savedGames.find((g) => g.id === gameId);
     if (!game || get().batchAnalysisProgress) return;
@@ -1200,6 +1498,19 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
       liveEvaluation: ev?.scoreAfter ?? cachedPos?.lines[0]?.score ?? state.liveEvaluation,
       liveLines: cachedPos ?? state.liveLines,
     });
+
+    // Sincronización automática de audio y subtítulos del profesor (Sección 13-B y 13-C)
+    if (ev) {
+      const depth = state.explanationDepth ?? 'normal';
+      const script =
+        ev.spokenNarrative?.[depth] ??
+        ev.spokenNarrative?.normal ??
+        `${ev.playedSanEs}, ${ev.classification.meta.label}. ${ev.whatHappened}`;
+      const isSilent = state.coachTeachingMode === 'silent';
+      const shouldSpeak = state.coachTeachingMode === 'auto' || (state.voiceEnabled && !isSilent);
+      speakCoachExplanation(script, { silentOnly: !shouldSpeak });
+    }
+
     if (!cachedPos) {
       try {
         const { analysis } = await getEngines();
@@ -1378,9 +1689,14 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   },
 
   nextChallengePuzzle: async () => {
-    const nextIdx = (get().puzzleIndex + 1) % PUZZLES.length;
+    const s = get();
+    if (s.mistakePracticeQueue.length > 0) {
+      await s.nextPracticeMistakeInQueue();
+      return;
+    }
+    const nextIdx = (s.puzzleIndex + 1) % PUZZLES.length;
     set({ puzzleIndex: nextIdx });
-    await get().loadChallengePuzzle(PUZZLES[nextIdx]);
+    await s.loadChallengePuzzle(PUZZLES[nextIdx]);
   },
 
   loadVerificationChallengeFromReport: async () => {

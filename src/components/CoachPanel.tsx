@@ -7,6 +7,7 @@ import { describeMoveNaturally, humanizeChessText } from '../chess/humanLanguage
 import { MOTIF_LABELS, type ExplanationLevel } from '../coach/explain';
 import { isSpeechSupported } from '../coach/soundAndSpeech';
 import { EasyExplanation } from './EasyExplanation';
+import { CoachAvatarWidget } from './CoachAvatarWidget';
 
 export const CoachPanel: React.FC = () => {
   const mode = useChessStore((s) => s.mode);
@@ -56,6 +57,9 @@ export const CoachPanel: React.FC = () => {
   const startVariantFromEval = useChessStore((s) => s.startVariantFromEval);
   const nextChallengePuzzle = useChessStore((s) => s.nextChallengePuzzle);
   const setActiveTab = useChessStore((s) => s.setActiveTab);
+  const mistakePracticeQueue = useChessStore((s) => s.mistakePracticeQueue);
+  const mistakePracticeIndex = useChessStore((s) => s.mistakePracticeIndex);
+  const practicePersonalMistake = useChessStore((s) => s.practicePersonalMistake);
 
   const [showHint, setShowHint] = useState(false);
   const [showLiveHint, setShowLiveHint] = useState(false);
@@ -241,7 +245,11 @@ export const CoachPanel: React.FC = () => {
         <div className="coach-panel__header">
           <div>
             <span className="eyebrow">
-              {mode === 'challenge' ? 'Modo 3 · Desafío Táctico/Estratégico' : 'Modo 5 · Juega la mejor jugada'}
+              {mistakePracticeQueue.length > 0
+                ? `🎯 Practicar mis errores · Ejercicio ${mistakePracticeIndex + 1} de ${mistakePracticeQueue.length}`
+                : mode === 'challenge'
+                  ? 'Modo 3 · Desafío Táctico/Estratégico'
+                  : 'Modo 5 · Juega la mejor jugada'}
             </span>
             <h3>{puzzle.title}</h3>
           </div>
@@ -314,7 +322,11 @@ export const CoachPanel: React.FC = () => {
                 void nextChallengePuzzle();
               }}
             >
-              Siguiente posición →
+              {mistakePracticeQueue.length > 0
+                ? mistakePracticeIndex + 1 < mistakePracticeQueue.length
+                  ? 'Siguiente error de la partida →'
+                  : 'Terminar práctica de errores ✓'
+                : 'Siguiente posición →'}
             </button>
             <button
               type="button"
@@ -463,6 +475,9 @@ export const CoachPanel: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Profesor Virtual con Voz: Avatar Animado, Subtítulos y Q&A */}
+      <CoachAvatarWidget />
 
       {/* Banner destacado cuando termina una partida */}
       {gameOver && (
@@ -794,6 +809,16 @@ export const CoachPanel: React.FC = () => {
                       ? `🟢 Iluminar recomendación de las ${playerName}`
                       : `🟢 Iluminar mejor jugada del rival`}
                   </button>
+                  {activeEval.bestUci !== activeEval.playedUci && (
+                    <button
+                      type="button"
+                      className="btn btn--accent btn--xs"
+                      onClick={() => void startVariantFromEval(activeEval, 'best_alternative')}
+                      title="Ver en el tablero la mejor jugada que recomendaba el motor sin alterar la partida"
+                    >
+                      👁 Ver mejor jugada
+                    </button>
+                  )}
                   {activeEval.bestLine && (
                     <button
                       type="button"
@@ -801,6 +826,40 @@ export const CoachPanel: React.FC = () => {
                       onClick={() => void startVariantFromEval(activeEval, 'best_alternative')}
                     >
                       ▶ Demostración
+                    </button>
+                  )}
+                  {activeEval.classification.meta.isMistake && isUserMove && (
+                    <button
+                      type="button"
+                      className="btn btn--secondary btn--xs"
+                      onClick={() =>
+                        void practicePersonalMistake({
+                          id: `mistake-${activeEval.ply}`,
+                          gameId: 'current',
+                          createdAt: new Date().toISOString(),
+                          ply: activeEval.ply,
+                          moveNumber: activeEval.moveNumber,
+                          playerColor: activeEval.mover,
+                          playedUci: activeEval.playedUci,
+                          playedSanEs: activeEval.playedSanEs,
+                          bestSanEs: activeEval.bestSanEs,
+                          bestUci: activeEval.bestUci,
+                          fenBefore: activeEval.fenBefore,
+                          cpLoss: activeEval.cpLoss,
+                          categoryLabel: activeEval.classification.meta.label,
+                          categoryColor: activeEval.classification.meta.color,
+                          motifs: activeEval.motifs,
+                          whatHappened: activeEval.whatHappened,
+                          bestAlternativeExplain: activeEval.bestAlternativeExplain,
+                          recommendation: activeEval.recommendation,
+                          mastered: false,
+                          solvedCount: 0,
+                          attemptsCount: 0,
+                        })
+                      }
+                      title="Convertir esta posición en un ejercicio interactivo para resolver en el tablero"
+                    >
+                      🎯 Practicar este error
                     </button>
                   )}
                 </div>
@@ -836,6 +895,18 @@ export const CoachPanel: React.FC = () => {
             <div className="coach-hero-advice__quote">
               🎓 <em>«<EasyExplanation text={activeEval.coachLesson} />»</em>
             </div>
+
+            {/* Observaciones tácticas y oportunidades concretas (Sección 4) */}
+            {activeEval.tacticalObservations && activeEval.tacticalObservations.length > 0 && (
+              <div className="coach-tactical-obs-list">
+                <span className="coach-tactical-obs-tag">⚡ Observaciones tácticas identificadas por Stockfish 19:</span>
+                <ul className="bullet-list">
+                  {activeEval.tacticalObservations.map((obs, idx) => (
+                    <li key={idx}><EasyExplanation text={obs} /></li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
 
           {/* ZONA 3: Dos tarjetas claras — Qué hiciste bien vs Qué vigilar */}
