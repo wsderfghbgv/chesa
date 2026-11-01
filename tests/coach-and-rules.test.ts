@@ -1,6 +1,7 @@
 import { describe, it, expect, afterAll } from 'vitest';
 import { Chess } from 'chess.js';
 import { createNodeEngine } from './helpers/nodeEngine';
+import { formatScore, describeScore } from '../src/engine/score';
 import {
   START_FEN,
   tryMove,
@@ -400,5 +401,48 @@ describe('Reglas oficiales del ajedrez, evaluación jugada a jugada y entrenador
     });
     expect(qa.answer.length).toBeGreaterThan(10);
     expect(qa.spokenAnswer.length).toBeGreaterThan(10);
+  });
+
+  it('reconoce tablas por triple repetición y por la regla de 50 jugadas', () => {
+    // Triple repetición
+    const repChess = new Chess();
+    // 1. Cf3 Cf6 2. Cg1 Cg8 (1ª repetición tras posición inicial)
+    // 3. Cf3 Cf6 4. Cg1 Cg8 (2ª repetición)
+    // 5. Cf3 (3ª repetición si se reclama)
+    ['g1f3', 'g8f6', 'f3g1', 'f6g8', 'g1f3', 'g8f6', 'f3g1', 'f6g8'].forEach((u) => {
+      tryMove(repChess, u);
+    });
+    expect(repChess.isThreefoldRepetition()).toBe(true);
+    const info = detectGameOver(repChess);
+    expect(info.over).toBe(true);
+    expect(info.reason).toBe('threefold');
+    expect(info.winner).toBeNull();
+
+    // Regla de 50 jugadas (100 plies sin captura ni avance de peón con material suficiente en el tablero)
+    const fiftyFen = 'r3k3/8/8/8/8/8/8/4K2R w K - 100 51';
+    const fiftyChess = new Chess(fiftyFen);
+    expect(fiftyChess.isDrawByFiftyMoves()).toBe(true);
+    const fiftyInfo = detectGameOver(fiftyChess);
+    expect(fiftyInfo.over).toBe(true);
+    expect(fiftyInfo.reason).toBe('fifty');
+  });
+
+  it('formatea y evalúa jaques mates y ventajas con signo coherente para Blancas y Negras', () => {
+    // Mate a favor de blancas en 2 jugadas
+    const whiteMateScore = { kind: 'mate', value: 2 };
+    expect(formatScore(whiteMateScore, 'w')).toBe('#2');
+    expect(formatScore(whiteMateScore, 'b')).toBe('#−2');
+    expect(describeScore(whiteMateScore, 'w')).toContain('mate forzado a tu favor en 2');
+    expect(describeScore(whiteMateScore, 'b')).toContain('mate forzado en tu contra en 2');
+
+    // Ventaja de centipeones
+    const cpWhiteScore = { kind: 'cp', value: 175 }; // +1.75 para blancas
+    expect(formatScore(cpWhiteScore, 'w')).toBe('+1.75');
+    expect(formatScore(cpWhiteScore, 'b')).toBe('−1.75');
+
+    // Posición igualada
+    const equalScore = { kind: 'cp', value: 0 };
+    expect(formatScore(equalScore, 'w')).toBe('0.00');
+    expect(formatScore(equalScore, 'b')).toBe('0.00');
   });
 });

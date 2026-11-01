@@ -61,6 +61,7 @@ export const AnalysisPanel: React.FC = () => {
     }
     if (validUcis.length === 0) return;
     useChessStore.setState({
+      customHighlightShapes: [],
       variant: {
         active: true,
         label: `Línea MultiPV (${sanList[0]})`,

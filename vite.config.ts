@@ -27,6 +27,18 @@ export default defineConfig({
       '/api': { target: 'http://localhost:8787', changeOrigin: true },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id: string) {
+          if (id.includes('@lichess-org/chessground')) return 'vendor-chessground';
+          if (id.includes('chess.js')) return 'vendor-chess';
+          if (id.includes('idb')) return 'vendor-storage';
+        },
+      },
+    },
+    chunkSizeWarningLimit: 600,
+  },
   test: {
     environment: 'node',
     include: ['tests/**/*.test.{ts,tsx}'],

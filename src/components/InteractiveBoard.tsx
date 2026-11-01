@@ -208,7 +208,7 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
     if (!pendingPromotion) return;
     const { from, to } = pendingPromotion;
     setPendingPromotion(null);
-    void Promise.resolve(onMove(from, to, role)).then((accepted) => {
+    void Promise.resolve(onMoveRef.current(from, to, role)).then((accepted) => {
       if (accepted === false && cgRef.current) {
         cgRef.current.set({ fen: fenRef.current });
       }

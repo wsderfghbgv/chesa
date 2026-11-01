@@ -761,6 +761,7 @@ export async function fetchOnlineGames(
     const url = `https://lichess.org/api/games/user/${encodeURIComponent(cleanUser)}?max=${limit}&pgnInJson=false&clocks=false&evals=false&opening=true`;
     const res = await fetch(url, {
       headers: { Accept: 'application/x-chess-pgn' },
+      signal: AbortSignal.timeout(12000),
     });
     if (!res.ok) {
       throw new Error(
@@ -773,7 +774,9 @@ export async function fetchOnlineGames(
   } else {
     // Chess.com Public API
     const archUrl = `https://api.chess.com/pub/player/${encodeURIComponent(cleanUser.toLowerCase())}/games/archives`;
-    const archRes = await fetch(archUrl);
+    const archRes = await fetch(archUrl, {
+      signal: AbortSignal.timeout(12000),
+    });
     if (!archRes.ok) {
       throw new Error(
         `No se encontró el perfil público «${cleanUser}» en Chess.com (código HTTP ${archRes.status}).`,
@@ -785,7 +788,9 @@ export async function fetchOnlineGames(
       throw new Error(`El usuario «${cleanUser}» no tiene archivos de partidas públicas en Chess.com.`);
     }
     const latestArchiveUrl = archives[archives.length - 1];
-    const gamesRes = await fetch(latestArchiveUrl);
+    const gamesRes = await fetch(latestArchiveUrl, {
+      signal: AbortSignal.timeout(12000),
+    });
     if (!gamesRes.ok) {
       throw new Error(`Error al descargar el archivo mensual de Chess.com (${gamesRes.status}).`);
     }

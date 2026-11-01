@@ -33,6 +33,7 @@ async function callLlm(payload) {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${openaiKey}`,
       },
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         model,
         temperature: 0.2,
@@ -53,6 +54,7 @@ async function callLlm(payload) {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(15000),
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
         contents: [{ role: 'user', parts: [{ text: userContent }] }],
@@ -69,6 +71,22 @@ async function callLlm(payload) {
 
 const server = createServer(async (req, res) => {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204);
+    res.end();
+    return;
+  }
+
+  req.on('error', (err) => {
+    try {
+      res.writeHead(400);
+      res.end(JSON.stringify({ ok: false, error: err.message }));
+    } catch { /* ignorado */ }
+  });
 
   if (req.method === 'GET' && req.url === '/api/health') {
     const hasProvider = Boolean(process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY);

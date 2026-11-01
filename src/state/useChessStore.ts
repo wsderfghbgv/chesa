@@ -1300,6 +1300,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     isBatchCancelled = true;
     void getEngines().then(({ analysis }) => {
       analysis.cancelTag('batch-analysis');
+      analysis.cancelTag('batch-import-analysis');
     });
     set({ batchAnalysisProgress: null, isAnalyzingMove: false });
   },
@@ -1403,6 +1404,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     const totalPlies = game.uciMoves.length;
     if (totalPlies === 0) return;
 
+    isBatchCancelled = false;
     set({
       batchAnalysisProgress: { gameId, currentPly: 0, totalPlies },
       statusBanner: `Analizando partida con Stockfish 19 (0 / ${totalPlies} plies)…`,
@@ -1425,6 +1427,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
 
       const evals: MoveEvaluation[] = [];
       for (let i = 0; i < totalPlies; i++) {
+        if (isBatchCancelled) break;
         const ply = i + 1;
         set({
           batchAnalysisProgress: { gameId, currentPly: ply, totalPlies },
@@ -1446,6 +1449,11 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
           fensHistory: game.fens.slice(0, ply + 1),
         });
         evals.push(ev);
+      }
+
+      if (isBatchCancelled) {
+        set({ batchAnalysisProgress: null });
+        return;
       }
 
       const histMotifs: Partial<Record<MotifId, number>> = {};
@@ -2431,6 +2439,7 @@ async function requestOptionalLlmExplanation(ev: MoveEvaluation) {
     const res = await fetch('/api/explain', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(6000),
       body: JSON.stringify({
         level: useChessStore.getState().explanationLevel,
         playedSan: ev.playedSanEs,
