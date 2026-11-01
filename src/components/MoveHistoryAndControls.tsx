@@ -30,6 +30,8 @@ export const BoardQuickControls: React.FC = () => {
   const toggleFocusBoardMode = useChessStore((s) => s.toggleFocusBoardMode);
   const cycleBoardTheme = useChessStore((s) => s.cycleBoardTheme);
   const toggleAutoPlay = useChessStore((s) => s.toggleAutoPlay);
+  const customHighlightShapes = useChessStore((s) => s.customHighlightShapes);
+  const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
 
   const boardThemeLabel: Record<'emerald' | 'wood' | 'midnight' | 'ocean', string> = {
     emerald: 'Esmeralda',
@@ -137,6 +139,16 @@ export const BoardQuickControls: React.FC = () => {
       </div>
 
       <div className="board-toolbar__actions">
+        {customHighlightShapes && customHighlightShapes.length > 0 && (
+          <button
+            type="button"
+            className="btn btn--accent btn--xs"
+            onClick={() => setCustomHighlightShapes([])}
+            title="Quitar las flechas y casillas señaladas del tablero"
+          >
+            ✕ Quitar señalización
+          </button>
+        )}
         <span className="board-color-chip" title={`Color con el que estás jugando (${playerColor === 'w' ? 'Blancas' : 'Negras'})`}>
           Tú: <strong>{playerColor === 'w' ? '♔ Blancas' : '♚ Negras'}</strong>
         </span>

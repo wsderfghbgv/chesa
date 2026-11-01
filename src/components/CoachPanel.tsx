@@ -41,6 +41,7 @@ export const CoachPanel: React.FC = () => {
   const toggleVisualOption = useChessStore((s) => s.toggleVisualOption);
   const toggleSimpleLanguageMode = useChessStore((s) => s.toggleSimpleLanguageMode);
   const toggleSquareLabelsOnBoard = useChessStore((s) => s.toggleSquareLabelsOnBoard);
+  const customHighlightShapes = useChessStore((s) => s.customHighlightShapes);
   const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
   const toggleSound = useChessStore((s) => s.toggleSound);
   const toggleVoice = useChessStore((s) => s.toggleVoice);
@@ -64,14 +65,24 @@ export const CoachPanel: React.FC = () => {
   const [showHint, setShowHint] = useState(false);
   const [showLiveHint, setShowLiveHint] = useState(false);
 
-  const highlightUciOnBoard = (uci: string, brush: 'green' | 'blue' | 'yellow' = 'green') => {
+  const isUciHighlighted = (uci?: string | null) => {
+    if (!uci || !customHighlightShapes || customHighlightShapes.length === 0) return false;
+    const p = parseUci(uci);
+    return customHighlightShapes.some((sh) => sh.orig === p.from && sh.dest === p.to);
+  };
+
+  const highlightUciOnBoard = (
+    uci: string,
+    brush: 'green' | 'blue' | 'yellow' = 'green',
+    doScroll = true,
+  ) => {
     const p = parseUci(uci);
     setCustomHighlightShapes([
       { orig: p.from, dest: p.to, brush },
       { orig: p.from, brush: 'yellow' },
       { orig: p.to, brush },
     ]);
-    if (typeof window !== 'undefined' && window.innerWidth <= 720) {
+    if (doScroll && typeof window !== 'undefined' && window.innerWidth <= 720) {
       const boardEl = document.querySelector('.board-stage');
       if (boardEl) {
         const rect = boardEl.getBoundingClientRect();
@@ -79,6 +90,32 @@ export const CoachPanel: React.FC = () => {
           boardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
+    }
+  };
+
+  const toggleHighlightUciOnBoard = (
+    uci: string,
+    brush: 'green' | 'blue' | 'yellow' = 'green',
+  ) => {
+    if (isUciHighlighted(uci)) {
+      setCustomHighlightShapes([]);
+      return;
+    }
+    highlightUciOnBoard(uci, brush, true);
+  };
+
+  const handlePreviewHover = (
+    uci: string,
+    brush: 'green' | 'blue' | 'yellow' = 'green',
+  ) => {
+    if (!isUciHighlighted(uci)) {
+      highlightUciOnBoard(uci, brush, false);
+    }
+  };
+
+  const handlePreviewLeave = (uci: string) => {
+    if (!isUciHighlighted(uci)) {
+      setCustomHighlightShapes([]);
     }
   };
 
@@ -206,13 +243,25 @@ export const CoachPanel: React.FC = () => {
               <div className="btn-row" style={{ marginTop: '0.45rem' }}>
                 <button
                   type="button"
-                  className="btn btn--primary btn--xs"
+                  className={`btn ${isUciHighlighted(expectedStep.uci) ? 'btn--accent' : 'btn--primary'} btn--xs`}
                   onClick={() => {
-                    setShowHint(true);
-                    highlightUciOnBoard(expectedStep.uci, 'green');
+                    if (isUciHighlighted(expectedStep.uci)) {
+                      setCustomHighlightShapes([]);
+                      setShowHint(false);
+                    } else {
+                      setShowHint(true);
+                      highlightUciOnBoard(expectedStep.uci, 'green');
+                    }
                   }}
+                  title={
+                    isUciHighlighted(expectedStep.uci)
+                      ? 'Ocultar flecha del tablero'
+                      : 'Señalar con flecha en el tablero qué pieza mover'
+                  }
                 >
-                  🟢 Señalar con flecha en el tablero qué pieza mover
+                  {isUciHighlighted(expectedStep.uci)
+                    ? '✕ Ocultar flecha teórica'
+                    : '🟢 Señalar con flecha en el tablero qué pieza mover'}
                 </button>
               </div>
             </div>
@@ -642,12 +691,19 @@ export const CoachPanel: React.FC = () => {
               <div className="btn-row" style={{ marginTop: '0.4rem' }}>
                 <button
                   type="button"
-                  className="btn btn--primary btn--xs"
-                  onMouseEnter={() => highlightUciOnBoard(liveTopUci, 'green')}
-                  onMouseLeave={() => setCustomHighlightShapes([])}
-                  onClick={() => highlightUciOnBoard(liveTopUci, 'green')}
+                  className={`btn ${isUciHighlighted(liveTopUci) ? 'btn--accent' : 'btn--primary'} btn--xs`}
+                  onMouseEnter={() => handlePreviewHover(liveTopUci, 'green')}
+                  onMouseLeave={() => handlePreviewLeave(liveTopUci)}
+                  onClick={() => toggleHighlightUciOnBoard(liveTopUci, 'green')}
+                  title={
+                    isUciHighlighted(liveTopUci)
+                      ? 'Ocultar señalización de jugada del tablero'
+                      : 'Señalar en el tablero con flecha verde la jugada recomendada'
+                  }
                 >
-                  🟢 Señalar mi jugada de las {playerColor === 'w' ? 'Blancas' : 'Negras'} en el tablero
+                  {isUciHighlighted(liveTopUci)
+                    ? '✕ Ocultar señalización de jugada'
+                    : `🟢 Señalar mi jugada de las ${playerColor === 'w' ? 'Blancas' : 'Negras'} en el tablero`}
                 </button>
                 <button
                   type="button"
@@ -761,14 +817,21 @@ export const CoachPanel: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  className="btn btn--ghost btn--xs"
-                  onMouseEnter={() => highlightUciOnBoard(activeEval.playedUci, 'blue')}
-                  onMouseLeave={() => setCustomHighlightShapes([])}
-                  onClick={() => highlightUciOnBoard(activeEval.playedUci, 'blue')}
+                  className={`btn ${isUciHighlighted(activeEval.playedUci) ? 'btn--accent' : 'btn--ghost'} btn--xs`}
+                  onMouseEnter={() => handlePreviewHover(activeEval.playedUci, 'blue')}
+                  onMouseLeave={() => handlePreviewLeave(activeEval.playedUci)}
+                  onClick={() => toggleHighlightUciOnBoard(activeEval.playedUci, 'blue')}
+                  title={
+                    isUciHighlighted(activeEval.playedUci)
+                      ? 'Ocultar flecha azul de la jugada realizada'
+                      : 'Señalar en el tablero la jugada realizada'
+                  }
                 >
-                  {isUserMove
-                    ? `🔵 Señalar mi jugada (${playerName}) en el tablero`
-                    : `🔵 Señalar jugada del rival (${evalColorName}) en el tablero`}
+                  {isUciHighlighted(activeEval.playedUci)
+                    ? '✕ Ocultar jugada señalada'
+                    : isUserMove
+                      ? `🔵 Señalar mi jugada (${playerName}) en el tablero`
+                      : `🔵 Señalar jugada del rival (${evalColorName}) en el tablero`}
                 </button>
               </div>
 
@@ -800,14 +863,21 @@ export const CoachPanel: React.FC = () => {
                 <div className="btn-row">
                   <button
                     type="button"
-                    className="btn btn--primary btn--xs"
-                    onMouseEnter={() => highlightUciOnBoard(activeEval.bestUci, 'green')}
-                    onMouseLeave={() => setCustomHighlightShapes([])}
-                    onClick={() => highlightUciOnBoard(activeEval.bestUci, 'green')}
+                    className={`btn ${isUciHighlighted(activeEval.bestUci) ? 'btn--accent' : 'btn--primary'} btn--xs`}
+                    onMouseEnter={() => handlePreviewHover(activeEval.bestUci, 'green')}
+                    onMouseLeave={() => handlePreviewLeave(activeEval.bestUci)}
+                    onClick={() => toggleHighlightUciOnBoard(activeEval.bestUci, 'green')}
+                    title={
+                      isUciHighlighted(activeEval.bestUci)
+                        ? 'Ocultar flecha de la mejor jugada recomendada'
+                        : 'Iluminar en el tablero la mejor opción calculada'
+                    }
                   >
-                    {isUserMove
-                      ? `🟢 Iluminar recomendación de las ${playerName}`
-                      : `🟢 Iluminar mejor jugada del rival`}
+                    {isUciHighlighted(activeEval.bestUci)
+                      ? '✕ Ocultar recomendación señalada'
+                      : isUserMove
+                        ? `🟢 Iluminar recomendación de las ${playerName}`
+                        : `🟢 Iluminar mejor jugada del rival`}
                   </button>
                   {activeEval.bestUci !== activeEval.playedUci && (
                     <button

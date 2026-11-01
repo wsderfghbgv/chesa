@@ -35,6 +35,7 @@ export const CoachAvatarWidget: React.FC = () => {
   const setExplanationDepth = useChessStore((s) => s.setExplanationDepth);
   const askCoachQuestion = useChessStore((s) => s.askCoachQuestion);
   const clearCoachQaHistory = useChessStore((s) => s.clearCoachQaHistory);
+  const customHighlightShapes = useChessStore((s) => s.customHighlightShapes);
   const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
   const speakText = useChessStore((s) => s.speakText);
 
@@ -436,24 +437,32 @@ export const CoachAvatarWidget: React.FC = () => {
                 <div className="coach-qa-card__a">
                   <div className="coach-qa-card__header">
                     <strong>🎓 Profesor:</strong>
-                    {item.highlightUci && (
-                      <button
-                        type="button"
-                        className="btn btn--secondary btn--xs"
-                        onClick={() => {
-                          const p = {
-                            from: item.highlightUci!.slice(0, 2),
-                            to: item.highlightUci!.slice(2, 4),
-                          };
-                          setCustomHighlightShapes([
-                            { orig: p.from as any, dest: p.to as any, brush: 'green' },
-                            { orig: p.from as any, brush: 'yellow' },
-                          ]);
-                        }}
-                      >
-                        🟢 Señalar en tablero
-                      </button>
-                    )}
+                    {item.highlightUci && (() => {
+                      const fromSq = item.highlightUci.slice(0, 2);
+                      const toSq = item.highlightUci.slice(2, 4);
+                      const isHighlighted = (customHighlightShapes ?? []).some(
+                        (sh) => sh.orig === fromSq && sh.dest === toSq
+                      );
+                      return (
+                        <button
+                          type="button"
+                          className={`btn ${isHighlighted ? 'btn--accent' : 'btn--secondary'} btn--xs`}
+                          onClick={() => {
+                            if (isHighlighted) {
+                              setCustomHighlightShapes([]);
+                            } else {
+                              setCustomHighlightShapes([
+                                { orig: fromSq as any, dest: toSq as any, brush: 'green' },
+                                { orig: fromSq as any, brush: 'yellow' },
+                              ]);
+                            }
+                          }}
+                          title={isHighlighted ? 'Ocultar señalización del tablero' : 'Señalar en el tablero qué pieza mover'}
+                        >
+                          {isHighlighted ? '✕ Ocultar señalización' : '🟢 Señalar en tablero'}
+                        </button>
+                      );
+                    })()}
                   </div>
                   <p><EasyExplanation text={item.answer} /></p>
                 </div>

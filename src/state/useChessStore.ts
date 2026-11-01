@@ -654,8 +654,9 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   setActiveTab: (tab) => set({ activeTab: tab }),
 
   setMode: async (mode) => {
+    set({ customHighlightShapes: [] });
     if (mode === 'challenge' || mode === 'find_best') {
-      set({ mode, activeTab: 'coach', variant: null, teachingPause: null });
+      set({ mode, activeTab: 'coach', variant: null, teachingPause: null, customHighlightShapes: [] });
       await get().loadChallengePuzzle(PUZZLES[get().puzzleIndex % PUZZLES.length]);
       return;
     }
@@ -944,6 +945,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
       mistakePracticeIndex: 0,
       postGameReport: null,
       rematchComparison,
+      customHighlightShapes: [],
       activeTab: 'coach',
       isOpponentThinking: false,
       isAnalyzingMove: false,
@@ -1020,6 +1022,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
       fens: nextFens,
       moves: nextMoves,
       viewingPly: newPly,
+      customHighlightShapes: [],
       activeThinkingCheck: null,
       turnStartedAt: Date.now(),
       whiteClockMs: s.playerColor === 'w' && s.clockEnabled ? Math.max(0, s.whiteClockMs + incMs) : s.whiteClockMs,
@@ -1064,6 +1067,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
       moves: nextMoves,
       fens: nextFens,
       viewingPly: targetLen,
+      customHighlightShapes: [],
       moveEvaluations: nextEvals,
       selectedEvalPly: targetLen > 0 ? targetLen : null,
       teachingPause: null,
@@ -1150,6 +1154,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
 
     const nextExpected = line.steps[stepIdx];
     set({
+      customHighlightShapes: [],
       mode: 'training_explained',
       playerColor: line.playerColor,
       orientation: line.playerColor,
@@ -1182,7 +1187,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   },
 
   exitOpeningDrill: async () => {
-    set({ activeOpeningTrainer: null });
+    set({ activeOpeningTrainer: null, customHighlightShapes: [] });
     await get().startNewGame();
   },
 
@@ -1192,6 +1197,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
       activeOpeningTrainer: null,
       activeChallenge: null,
       activePersonalMistakeId: null,
+      customHighlightShapes: [],
       opponentLevelId: LEVELS[7].id, // Maestro / Gran Maestro para defensa/ataque técnico preciso
     });
     await get().startNewGame({
@@ -1203,11 +1209,12 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     set({
       statusBanner: `Laboratorio de Finales: ${drill.objectiveText}`,
       activeTab: 'coach',
+      customHighlightShapes: [],
     });
   },
 
   exitEndgameDrill: async () => {
-    set({ activeEndgameDrill: null });
+    set({ activeEndgameDrill: null, customHighlightShapes: [] });
     await get().startNewGame();
   },
 
@@ -1228,6 +1235,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     set({
       mode: 'challenge',
       activeTab: 'coach',
+      customHighlightShapes: [],
       activePersonalMistakeId: mistake.id,
       activeOpeningTrainer: null,
       activeEndgameDrill: null,
@@ -1263,6 +1271,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     set({
       mode: 'find_best',
       activeTab: 'coach',
+      customHighlightShapes: [],
       mistakePracticeQueue: puzzles,
       mistakePracticeIndex: 0,
       activeOpeningTrainer: null,
@@ -1500,6 +1509,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     const cachedPos = state.posAnalysisByPly[clamped] ?? null;
     set({
       viewingPly: clamped,
+      customHighlightShapes: [],
       selectedEvalPly: ev ? clamped : state.selectedEvalPly,
       variant: null,
       liveEvaluation: ev?.scoreAfter ?? cachedPos?.lines[0]?.score ?? state.liveEvaluation,
@@ -1551,6 +1561,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     }
     const stepIndex = Math.min(1, fens.length - 1);
     set({
+      customHighlightShapes: [],
       variant: {
         active: true,
         label: kind === 'best_alternative' ? `Mejor alternativa (${evalItem.bestSanEs})` : 'Respuesta del rival',
@@ -1618,7 +1629,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     void analyzeVariantStep();
   },
 
-  exitVariant: () => set({ variant: null }),
+  exitVariant: () => set({ variant: null, customHighlightShapes: [] }),
 
   cancelOngoingAnalysis: () => {
     void getEngines().then(({ analysis }) => {
@@ -1667,6 +1678,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     get().stopAutoPlay();
     const puz = puzzle ?? PUZZLES[get().puzzleIndex % PUZZLES.length];
     set({
+      customHighlightShapes: [],
       playerColor: puz.playerColor,
       orientation: puz.playerColor,
       startFen: puz.fen,
@@ -1685,6 +1697,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
       },
       statusBanner: puz.prompt,
     });
+    if (typeof Worker === 'undefined') return;
     try {
       const { analysis } = await getEngines();
       const res = await analysis.analyze({ fen: puz.fen, depth: get().analysisDepth, multipv: 3 }, { priority: 6 });
@@ -1774,6 +1787,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     for (const ev of game.evaluations) evalMap[ev.ply] = ev;
 
     set({
+      customHighlightShapes: [],
       playerColor: game.playerColor,
       orientation: game.playerColor,
       startFen: game.startFen,
@@ -2454,7 +2468,7 @@ async function requestOptionalLlmExplanation(ev: MoveEvaluation) {
 export function selectActiveBoardShapes(state: ChessStoreState): DrawShape[] {
   const custom = state.customHighlightShapes ?? [];
   // En modo sin ayuda solo se ocultan las ayudas DURANTE la partida; al terminar (gameOver) se desbloquean todas.
-  if (!state.showVisualAids || (state.mode === 'no_aid' && !state.gameOver)) return custom;
+  if (!state.showVisualAids || (state.mode === 'no_aid' && !state.gameOver)) return [];
 
   if (state.variant?.active) {
     const shapes: DrawShape[] = [...custom];

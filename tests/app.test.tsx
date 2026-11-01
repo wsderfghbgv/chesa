@@ -179,5 +179,31 @@ describe('App component render test', () => {
     useChessStore.getState().exitVariant();
     expect(useChessStore.getState().variant).toBeNull();
   });
+
+  it('desactiva y limpia las formas de señalización (customHighlightShapes) al cambiar de modo de juego', async () => {
+    // Señalizar una jugada en el tablero
+    useChessStore.getState().setCustomHighlightShapes([
+      { orig: 'e2', dest: 'e4', brush: 'green' },
+      { orig: 'e2', brush: 'yellow' },
+    ]);
+    expect(useChessStore.getState().customHighlightShapes.length).toBe(2);
+
+    // Al cambiar de modo a desafío o cualquier otro, debe limpiarse
+    await useChessStore.getState().setMode('challenge');
+    expect(useChessStore.getState().customHighlightShapes).toEqual([]);
+
+    // En modo sin ayuda durante la partida, selectActiveBoardShapes no debe mostrar ayudas
+    useChessStore.getState().setCustomHighlightShapes([{ orig: 'd2', dest: 'd4', brush: 'green' }]);
+    const shapesNoAid = selectActiveBoardShapes({
+      ...useChessStore.getState(),
+      mode: 'no_aid',
+      gameOver: false,
+    });
+    expect(shapesNoAid).toEqual([]);
+
+    // Y permite limpiarlas explícitamente a través de setCustomHighlightShapes([])
+    useChessStore.getState().setCustomHighlightShapes([]);
+    expect(useChessStore.getState().customHighlightShapes).toEqual([]);
+  });
 });
 
