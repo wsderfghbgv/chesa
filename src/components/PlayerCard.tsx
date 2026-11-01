@@ -3,7 +3,6 @@ import type { Color, CapturedPieces } from '../chess/utils';
 
 export interface PlayerCardProps {
   name: string;
-  shortName?: string;
   rating?: number | string;
   titleBadge?: string;
   avatarIcon?: string;
@@ -17,7 +16,6 @@ export interface PlayerCardProps {
   clockEnabled?: boolean;
   statusText?: string;
   quote?: string;
-  extraControls?: React.ReactNode;
 }
 
 function formatClockDisplay(ms: number): string {
@@ -42,7 +40,6 @@ const PIECE_SYMBOLS: Record<'w' | 'b', Record<keyof CapturedPieces, string>> = {
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({
   name,
-  shortName,
   rating,
   titleBadge,
   avatarIcon = '♟',
@@ -56,7 +53,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   clockEnabled = false,
   statusText,
   quote,
-  extraControls,
 }) => {
   const isLowTime = clockEnabled && isActiveTurn && clockMs > 0 && clockMs < 30000;
   const oppColor: Color = color === 'w' ? 'b' : 'w';
@@ -85,7 +81,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <div
           className={`player-card__avatar ${isThinking ? 'player-card__avatar--pulse' : ''}`}
           style={avatarColor ? { background: avatarColor } : undefined}
-          title={quote ? `"${quote}"` : name}
+          title={quote ? `«${quote}»` : name}
         >
           <span className="player-card__avatar-symbol" aria-hidden="true">
             {avatarIcon}
@@ -99,9 +95,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <div className="player-card__details">
           <div className="player-card__header-line">
             {titleBadge && <span className="player-card__title-badge">{titleBadge}</span>}
-            <strong className="player-card__name">
-              <span className="player-card__name--full">{name}</span>
-              {shortName && <span className="player-card__name--short">{shortName}</span>}
+            <strong className="player-card__name" title={name}>
+              {name}
             </strong>
             {rating !== undefined && (
               <span className="player-card__rating">({rating})</span>
@@ -113,7 +108,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   <span />
                   <span />
                 </span>
-                Calculando
+                Calculando…
               </span>
             )}
           </div>
@@ -146,8 +141,6 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       </div>
 
       <div className="player-card__right">
-        {extraControls}
-
         {clockEnabled && (
           <div
             className={`player-card__clock ${isActiveTurn ? 'player-card__clock--active' : ''} ${

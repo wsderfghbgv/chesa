@@ -382,7 +382,6 @@ export const App: React.FC = () => {
           {/* Jugador superior */}
           <PlayerCard
             name={topIsPlayer ? 'Tú' : currentLevel.botName}
-            shortName={topIsPlayer ? 'Tú' : currentLevel.name}
             titleBadge={topIsPlayer ? undefined : currentLevel.botTitle}
             rating={topIsPlayer ? 1200 : currentLevel.botElo}
             avatarIcon={topIsPlayer ? '♟' : currentLevel.botAvatar}
@@ -444,10 +443,9 @@ export const App: React.FC = () => {
             />
           </div>
 
-          {/* Jugador inferior + Leyenda compacta integrada */}
+          {/* Jugador inferior */}
           <PlayerCard
             name={bottomIsPlayer ? 'Tú' : currentLevel.botName}
-            shortName={bottomIsPlayer ? 'Tú' : currentLevel.name}
             titleBadge={bottomIsPlayer ? undefined : currentLevel.botTitle}
             rating={bottomIsPlayer ? 1200 : currentLevel.botElo}
             avatarIcon={bottomIsPlayer ? '♟' : currentLevel.botAvatar}
@@ -469,107 +467,49 @@ export const App: React.FC = () => {
             clockMs={bottomColor === 'w' ? whiteClockMs : blackClockMs}
             clockEnabled={clockEnabled}
             statusText={bottomIsPlayer ? statusBanner : undefined}
-            extraControls={
-              (mode !== 'no_aid' || gameOver) && showVisualAids ? (
-                <div className="board-mini-legend" aria-label="Colores de las flechas">
-                  <span>
-                    <i className="legend-dot legend-dot--green" /> Mejor
-                  </span>
-                  <span>
-                    <i className="legend-dot legend-dot--blue" /> Jugada
-                  </span>
-                  <span>
-                    <i className="legend-dot legend-dot--red" /> Peligro
-                  </span>
-                  <span
-                    className="drawing-help-pill"
-                    title="Clic derecho: dibuja flechas y sombrea casillas. Mayús: rojo, Alt: azul. Clic izquierdo en tablero: borrar."
-                  >
-                    🎨 Clic derecho dibuja
-                  </span>
-                </div>
-              ) : null
-            }
           />
 
-          {/* Tarjeta del Profesor estilo Chess.com Game Review directamente bajo el tablero */}
-          {(mode !== 'no_aid' || gameOver) && (
+          {/* Tarjeta de Pausa Pedagógica del Profesor: Solo cuando hay una pausa activa */}
+          {teachingPause?.active && (
             <div
-              className={`coach-mini-bubble ${teachingPause?.active ? 'coach-mini-bubble--pause' : ''}`}
-              role="status"
+              className="coach-mini-bubble coach-mini-bubble--pause"
+              role="alert"
               aria-live="polite"
             >
-              <div className="coach-mini-bubble__avatar" aria-hidden="true">🎓</div>
+              <div className="coach-mini-bubble__avatar" aria-hidden="true">
+                🎓
+              </div>
               <div className="coach-mini-bubble__body">
-                {teachingPause?.active ? (
-                  <>
-                    <div className="coach-mini-bubble__top">
-                      <span
-                        className="coach-mini-bubble__badge"
-                        style={{ backgroundColor: teachingPause.evaluation.classification.meta.color }}
-                      >
-                        {teachingPause.evaluation.classification.meta.symbol}{' '}
-                        {teachingPause.evaluation.classification.meta.label}
-                      </span>
-                      <strong className="coach-mini-bubble__move">
-                        Jugaste {teachingPause.evaluation.playedSanEs} · Mejor era {teachingPause.evaluation.bestSanEs}
-                      </strong>
-                    </div>
-                    <p className="coach-mini-bubble__text">{teachingPause.message}</p>
-                    <div className="coach-mini-bubble__actions">
-                      <button
-                        type="button"
-                        className="btn btn--primary btn--xs"
-                        onClick={() => void retryFromTeachingPause()}
-                      >
-                        ↩ Reintentar jugada
-                      </button>
-                      <button
-                        type="button"
-                        className="btn btn--ghost btn--xs"
-                        onClick={() => void resumeFromTeachingPause()}
-                      >
-                        Continuar →
-                      </button>
-                    </div>
-                  </>
-                ) : activeEval ? (
-                  <>
-                    <div className="coach-mini-bubble__top">
-                      <span
-                        className="coach-mini-bubble__badge"
-                        style={{ backgroundColor: activeEval.classification.meta.color }}
-                      >
-                        {activeEval.classification.meta.symbol} {activeEval.classification.meta.label}
-                      </span>
-                      <strong className="coach-mini-bubble__move">
-                        {activeEval.moveNumber}{activeEval.mover === 'w' ? '.' : '...'} {activeEval.playedSanEs}
-                      </strong>
-                      {!activeEval.classification.isTopEngineMove && (
-                        <span className="coach-mini-bubble__best">
-                          Mejor: <b>{activeEval.bestSanEs}</b>
-                        </span>
-                      )}
-                      <button
-                        type="button"
-                        className="coach-mini-bubble__more"
-                        onClick={() => handleSelectTab('coach')}
-                      >
-                        Ver análisis ↓
-                      </button>
-                    </div>
-                    <p className="coach-mini-bubble__text">{activeEval.whatHappened}</p>
-                  </>
-                ) : (
-                  <div className="coach-mini-bubble__top">
-                    <span className="coach-mini-bubble__badge coach-mini-bubble__badge--ready">
-                      Stockfish 19
-                    </span>
-                    <span className="coach-mini-bubble__text">
-                      {statusBanner || 'Mueve una pieza. La flecha verde te indica la mejor jugada.'}
-                    </span>
-                  </div>
-                )}
+                <div className="coach-mini-bubble__top">
+                  <span
+                    className="coach-mini-bubble__badge"
+                    style={{ backgroundColor: teachingPause.evaluation.classification.meta.color }}
+                  >
+                    {teachingPause.evaluation.classification.meta.symbol}{' '}
+                    {teachingPause.evaluation.classification.meta.label}
+                  </span>
+                  <strong className="coach-mini-bubble__move">
+                    Jugaste {teachingPause.evaluation.playedSanEs} · Mejor era{' '}
+                    {teachingPause.evaluation.bestSanEs}
+                  </strong>
+                </div>
+                <p className="coach-mini-bubble__text">{teachingPause.message}</p>
+                <div className="coach-mini-bubble__actions">
+                  <button
+                    type="button"
+                    className="btn btn--primary btn--xs"
+                    onClick={() => void retryFromTeachingPause()}
+                  >
+                    ↩ Reintentar jugada
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn--ghost btn--xs"
+                    onClick={() => void resumeFromTeachingPause()}
+                  >
+                    Continuar →
+                  </button>
+                </div>
               </div>
             </div>
           )}
