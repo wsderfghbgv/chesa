@@ -13,7 +13,7 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:puzzles": "node scripts/verify-puzzles.mjs",
+    "verify:puzzles": "vitest run tests/coach-and-rules.test.ts -t 'ejercicios del banco'",
     "server": "node server/index.mjs"
   },
   "dependencies": {

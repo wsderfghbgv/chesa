@@ -194,7 +194,7 @@ export const ProfilePanel: React.FC = () => {
                 const dotColor =
                   pt.outcome === 'win' ? '#22c55e' : pt.outcome === 'draw' ? '#eab308' : '#ef4444';
                 return (
-                  <g key={pt.gameId}>
+                  <g key={`${pt.gameId}-${idx}`}>
                     {next && (
                       <line
                         x1={x}

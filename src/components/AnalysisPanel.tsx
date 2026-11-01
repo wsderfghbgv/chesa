@@ -22,7 +22,10 @@ export const AnalysisPanel: React.FC = () => {
   const cancelOngoingAnalysis = useChessStore((s) => s.cancelOngoingAnalysis);
   const startNewGame = useChessStore((s) => s.startNewGame);
 
-  const currentFen = variant?.active ? variant.fens[variant.stepIndex] : fens[viewingPly];
+  const currentFen =
+    (variant?.active ? variant.fens[variant.stepIndex] : fens[viewingPly]) ??
+    fens[fens.length - 1] ??
+    'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
   const [fenInput, setFenInput] = useState('');
   const [fenError, setFenError] = useState<string | null>(null);
   const [copiedFen, setCopiedFen] = useState(false);

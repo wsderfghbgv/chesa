@@ -116,6 +116,28 @@ export function soundTypeForSan(san: string): ChessSoundType {
   return 'move';
 }
 
+let cachedEsVoice: SpeechSynthesisVoice | null = null;
+function findEsVoice(): SpeechSynthesisVoice | null {
+  if (cachedEsVoice) return cachedEsVoice;
+  if (!isSpeechSupported()) return null;
+  const voices = window.speechSynthesis.getVoices?.() ?? [];
+  const es =
+    voices.find((v) => v.lang.toLowerCase().startsWith('es') && v.localService) ??
+    voices.find((v) => v.lang.toLowerCase().startsWith('es')) ??
+    null;
+  if (es) cachedEsVoice = es;
+  return es;
+}
+
+if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+  try {
+    window.speechSynthesis.onvoiceschanged = () => {
+      cachedEsVoice = null;
+      findEsVoice();
+    };
+  } catch { /* ignorado */ }
+}
+
 export function isSpeechSupported(): boolean {
   return typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
 }
@@ -410,10 +432,7 @@ export function speakCoachExplanation(text: string, options: SpeakOptions = {}):
     utterance.volume = speechState.volume;
     utterance.pitch = 1.0;
 
-    const voices = window.speechSynthesis.getVoices?.() ?? [];
-    const esVoice =
-      voices.find((v) => v.lang.toLowerCase().startsWith('es') && v.localService) ??
-      voices.find((v) => v.lang.toLowerCase().startsWith('es'));
+    const esVoice = findEsVoice();
     if (esVoice) {
       utterance.voice = esVoice;
     }

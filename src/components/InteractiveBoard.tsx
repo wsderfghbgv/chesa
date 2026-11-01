@@ -19,7 +19,7 @@ interface InteractiveBoardProps {
   isVariantMode?: boolean;
   showSquareLabels?: boolean;
   boardTheme?: 'emerald' | 'wood' | 'midnight' | 'ocean';
-  onMove: (from: Square, to: Square, promotion?: PieceSymbol) => void;
+  onMove: (from: Square, to: Square, promotion?: PieceSymbol) => void | boolean | Promise<boolean | void>;
 }
 
 function countBoardPieces(fenStr: string): number {
@@ -106,7 +106,18 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
       },
     });
     cgRef.current = api;
+
+    // Observador de cambio de tamaño para recalcular geometría de casillas y piezas al rotar o redimensionar
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && boardRef.current) {
+      ro = new ResizeObserver(() => {
+        api.redrawAll();
+      });
+      ro.observe(boardRef.current);
+    }
+
     return () => {
+      ro?.disconnect();
       api.destroy();
       cgRef.current = null;
     };
@@ -180,7 +191,11 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
             if (isPromotion(curChess, fromSq, toSq)) {
               setPendingPromotion({ from: fromSq, to: toSq, color: curChess.turn() });
             } else {
-              onMoveRef.current(fromSq, toSq);
+              void Promise.resolve(onMoveRef.current(fromSq, toSq)).then((accepted) => {
+                if (accepted === false && cgRef.current) {
+                  cgRef.current.set({ fen: fenRef.current });
+                }
+              });
             }
           },
         },
@@ -193,7 +208,11 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
     if (!pendingPromotion) return;
     const { from, to } = pendingPromotion;
     setPendingPromotion(null);
-    onMove(from, to, role);
+    void Promise.resolve(onMove(from, to, role)).then((accepted) => {
+      if (accepted === false && cgRef.current) {
+        cgRef.current.set({ fen: fenRef.current });
+      }
+    });
   };
 
   const handleCancelPromotion = () => {

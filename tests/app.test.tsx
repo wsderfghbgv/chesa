@@ -142,5 +142,42 @@ describe('App component render test', () => {
       (globalThis as any).localStorage = prevStorage;
     }
   });
+
+  it('detiene la reproducción automática al solicitar stopAutoPlay o al interactuar con el tablero', () => {
+    useChessStore.setState({ isAutoPlaying: true });
+    expect(useChessStore.getState().isAutoPlaying).toBe(true);
+
+    useChessStore.getState().stopAutoPlay();
+    expect(useChessStore.getState().isAutoPlaying).toBe(false);
+
+    // Si se activa de nuevo, stopAutoPlay limpia el estado
+    useChessStore.setState({ isAutoPlaying: true });
+    useChessStore.getState().stopAutoPlay();
+    expect(useChessStore.getState().isAutoPlaying).toBe(false);
+  });
+
+  it('navega correctamente dentro de una variante sin desincronizar la partida principal', () => {
+    useChessStore.setState({
+      variant: {
+        active: true,
+        label: 'Prueba de variante',
+        originPly: 0,
+        originFen: START_FEN,
+        uciMoves: ['e2e4', 'e7e5'],
+        sanMoves: ['e4', 'e5'],
+        fens: [START_FEN, 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq - 0 1', 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq - 0 2'],
+        stepIndex: 1,
+      },
+    });
+
+    useChessStore.getState().stepVariant(1);
+    expect(useChessStore.getState().variant?.stepIndex).toBe(2);
+
+    useChessStore.getState().stepVariant(-1);
+    expect(useChessStore.getState().variant?.stepIndex).toBe(1);
+
+    useChessStore.getState().exitVariant();
+    expect(useChessStore.getState().variant).toBeNull();
+  });
 });
 

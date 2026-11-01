@@ -870,6 +870,8 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
 
   startNewGame: async (opts = {}) => {
     const cur = get();
+    cur.stopAutoPlay();
+    stopCoachSpeech();
     const nextMode = opts.mode ?? (cur.mode === 'challenge' || cur.mode === 'find_best' ? 'training_explained' : cur.mode);
     let nextColor: Color = opts.color ?? cur.playerColor;
     let rematchComparison: RematchComparison | null = null;
@@ -938,6 +940,8 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
       activeOpeningTrainer: null,
       activeEndgameDrill: opts.keepEndgameDrill ? cur.activeEndgameDrill : null,
       activeThinkingCheck: null,
+      mistakePracticeQueue: [],
+      mistakePracticeIndex: 0,
       postGameReport: null,
       rematchComparison,
       activeTab: 'coach',
@@ -955,6 +959,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
 
   playUserMove: async (from, to, promotion) => {
     const state = get();
+    state.stopAutoPlay();
 
     // Si está en una variante libre, redirigir la jugada al explorador de variantes.
     if (state.variant?.active) {
@@ -1031,6 +1036,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
 
   undoMovePair: async () => {
     const state = get();
+    state.stopAutoPlay();
     if (state.mode === 'no_aid' && !state.gameOver) return; // En modo sin ayuda no se deshace durante la partida.
     if (state.moves.length === 0) return;
 
@@ -1113,6 +1119,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   },
 
   startOpeningDrill: async (line) => {
+    get().stopAutoPlay();
     const chess = new Chess(START_FEN);
     const fens: string[] = [START_FEN];
     const moves: MoveHistoryItem[] = [];
@@ -1507,7 +1514,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
         ev.spokenNarrative?.normal ??
         `${ev.playedSanEs}, ${ev.classification.meta.label}. ${ev.whatHappened}`;
       const isSilent = state.coachTeachingMode === 'silent';
-      const shouldSpeak = state.coachTeachingMode === 'auto' || (state.voiceEnabled && !isSilent);
+      const shouldSpeak = state.coachTeachingMode === 'auto' && state.voiceEnabled && !isSilent;
       speakCoachExplanation(script, { silentOnly: !shouldSpeak });
     }
 
@@ -1556,7 +1563,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
         analysis: null,
       },
     });
-    await analyzeVariantStep();
+    void analyzeVariantStep();
   },
 
   stepVariant: async (delta) => {
@@ -1564,7 +1571,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     if (!v) return;
     const nextIdx = Math.max(0, Math.min(v.fens.length - 1, v.stepIndex + delta));
     set({ variant: { ...v, stepIndex: nextIdx } });
-    await analyzeVariantStep();
+    void analyzeVariantStep();
   },
 
   playFreeVariantMove: async (from, to, promotion) => {
@@ -1608,7 +1615,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
         },
       });
     }
-    await analyzeVariantStep();
+    void analyzeVariantStep();
   },
 
   exitVariant: () => set({ variant: null }),
@@ -1657,6 +1664,7 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   },
 
   loadChallengePuzzle: async (puzzle) => {
+    get().stopAutoPlay();
     const puz = puzzle ?? PUZZLES[get().puzzleIndex % PUZZLES.length];
     set({
       playerColor: puz.playerColor,
@@ -2376,11 +2384,13 @@ async function handleChallengeMove(
       },
       statusBanner: `Inténtalo de nuevo. Pista: ${ch.puzzle.hint}`,
     });
+    return false;
   }
   return true;
 }
 
 async function analyzeVariantStep() {
+  if (typeof Worker === 'undefined') return;
   const s = useChessStore.getState();
   const v = s.variant;
   if (!v) return;

@@ -4,7 +4,7 @@
  * Muestra la evolución de la ventaja de Blancas/Negras a lo largo de toda la partida
  * y permite hacer clic en cualquier punto para saltar instantáneamente a esa jugada en el tablero.
  */
-import React from 'react';
+import React, { useId } from 'react';
 import { useChessStore } from '../state/useChessStore';
 import { scoreToCp, formatScore } from '../engine/score';
 
@@ -20,6 +20,7 @@ export const EvalChart: React.FC<EvalChartProps> = ({ compact = false }) => {
   const mode = useChessStore((s) => s.mode);
   const gameOver = useChessStore((s) => s.gameOver);
   const selectPly = useChessStore((s) => s.selectPly);
+  const gradId = useId();
 
   // En modo sin ayuda ocultamos la curva durante la partida; al terminar se desbloquea por completo.
   if (mode === 'no_aid' && !gameOver) return null;
@@ -104,7 +105,7 @@ export const EvalChart: React.FC<EvalChartProps> = ({ compact = false }) => {
         aria-label="Curva de evaluación por jugada"
       >
         <defs>
-          <linearGradient id="evalAreaGrad" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#10b981" stopOpacity="0.38" />
             <stop offset="50%" stopColor="#10b981" stopOpacity="0.06" />
             <stop offset="100%" stopColor="#6366f1" stopOpacity="0.35" />
@@ -123,7 +124,7 @@ export const EvalChart: React.FC<EvalChartProps> = ({ compact = false }) => {
         />
 
         {/* Área y curva */}
-        <path d={areaPath} fill="url(#evalAreaGrad)" />
+        <path d={areaPath} fill={`url(#${gradId})`} />
         <path d={linePath} fill="none" stroke="#10b981" strokeWidth="2.2" />
 
         {/* Indicador vertical del ply seleccionado actualmente */}

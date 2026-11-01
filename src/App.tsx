@@ -405,7 +405,7 @@ export const App: React.FC = () => {
               isVariantMode={Boolean(variant?.active)}
               showSquareLabels={showSquareLabelsOnBoard}
               boardTheme={boardTheme}
-              onMove={(from, to, promo) => void playUserMove(from, to, promo)}
+              onMove={(from, to, promo) => playUserMove(from, to, promo)}
             />
           </div>
 

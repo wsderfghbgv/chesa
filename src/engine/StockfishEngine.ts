@@ -482,6 +482,14 @@ export class StockfishEngine {
 
 /** Transporte para navegador: Stockfish compilado a WASM dentro de un Web Worker. */
 export function createWorkerTransport(url: string): EngineTransport {
+  if (typeof Worker === 'undefined') {
+    return {
+      send: () => {},
+      onLine: () => {},
+      onError: () => {},
+      terminate: () => {},
+    };
+  }
   const worker = new Worker(url);
   let lineCb: (l: string) => void = () => {};
   let errCb: (e: unknown) => void = () => {};

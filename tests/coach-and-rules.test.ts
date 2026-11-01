@@ -362,9 +362,9 @@ describe('Reglas oficiales del ajedrez, evaluación jugada a jugada y entrenador
     // 2. Clasificación Libro
     const bookClass = classifyMove({
       playedUci: 'e7e5',
-      scoreBefore: { type: 'cp', value: 20 },
-      scoreAfter: { type: 'cp', value: 20 },
-      linesBefore: [{ multipv: 1, depth: 10, pv: ['e7e5'], score: { type: 'cp', value: 20 } }],
+      scoreBefore: { kind: 'cp', value: 20 },
+      scoreAfter: { kind: 'cp', value: 20 },
+      linesBefore: [{ multipv: 1, depth: 10, pv: ['e7e5'], score: { kind: 'cp', value: 20 } }],
       mover: 'b',
       isBookMove: true,
     });
@@ -374,11 +374,11 @@ describe('Reglas oficiales del ajedrez, evaluación jugada a jugada y entrenador
     // 3. Clasificación Brillante
     const brilliantClass = classifyMove({
       playedUci: 'd1h5',
-      scoreBefore: { type: 'cp', value: 0 },
-      scoreAfter: { type: 'cp', value: 250 },
+      scoreBefore: { kind: 'cp', value: 0 },
+      scoreAfter: { kind: 'cp', value: 250 },
       linesBefore: [
-        { multipv: 1, depth: 12, pv: ['d1h5'], score: { type: 'cp', value: 250 } },
-        { multipv: 2, depth: 12, pv: ['g1f3'], score: { type: 'cp', value: 40 } },
+        { multipv: 1, depth: 12, pv: ['d1h5'], score: { kind: 'cp', value: 250 } },
+        { multipv: 2, depth: 12, pv: ['g1f3'], score: { kind: 'cp', value: 40 } },
       ],
       mover: 'w',
       isBrillianceCandidate: true,

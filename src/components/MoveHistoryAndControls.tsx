@@ -19,6 +19,7 @@ export const BoardQuickControls: React.FC = () => {
   const isAutoPlaying = useChessStore((s) => s.isAutoPlaying);
 
   const selectPly = useChessStore((s) => s.selectPly);
+  const stepVariant = useChessStore((s) => s.stepVariant);
   const startNewGame = useChessStore((s) => s.startNewGame);
   const undoMovePair = useChessStore((s) => s.undoMovePair);
   const resignGame = useChessStore((s) => s.resignGame);
@@ -37,7 +38,45 @@ export const BoardQuickControls: React.FC = () => {
     ocean: 'Océano',
   };
 
-  const canUndo = (mode !== 'no_aid' || gameOver) && moves.length > 0;
+  const isVariantActive = Boolean(variant?.active);
+  const maxVariantIndex = variant ? variant.fens.length - 1 : 0;
+  const currentVariantStep = variant ? variant.stepIndex : 0;
+
+  const handleNavFirst = () => {
+    if (isVariantActive) {
+      void stepVariant(-currentVariantStep);
+    } else {
+      void selectPly(0);
+    }
+  };
+
+  const handleNavPrev = () => {
+    if (isVariantActive) {
+      void stepVariant(-1);
+    } else {
+      void selectPly(viewingPly - 1);
+    }
+  };
+
+  const handleNavNext = () => {
+    if (isVariantActive) {
+      void stepVariant(1);
+    } else {
+      void selectPly(viewingPly + 1);
+    }
+  };
+
+  const handleNavLast = () => {
+    if (isVariantActive) {
+      void stepVariant(maxVariantIndex - currentVariantStep);
+    } else {
+      void selectPly(moves.length);
+    }
+  };
+
+  const canGoBack = isVariantActive ? currentVariantStep > 0 : viewingPly > 0;
+  const canGoForward = isVariantActive ? currentVariantStep < maxVariantIndex : viewingPly < moves.length;
+  const canUndo = (mode !== 'no_aid' || gameOver) && moves.length > 0 && !isVariantActive;
 
   return (
     <div className="board-toolbar" role="toolbar" aria-label="Controles de partida y navegación">
@@ -45,43 +84,47 @@ export const BoardQuickControls: React.FC = () => {
         <button
           type="button"
           className="icon-btn"
-          title="Ir al inicio de la partida"
-          disabled={viewingPly === 0 && !variant}
-          onClick={() => void selectPly(0)}
+          title={isVariantActive ? 'Ir al inicio de la variante' : 'Ir al inicio de la partida'}
+          disabled={!canGoBack}
+          onClick={handleNavFirst}
         >
           ⏮
         </button>
         <button
           type="button"
           className="icon-btn"
-          title="Jugada anterior"
-          disabled={viewingPly <= 0 && !variant}
-          onClick={() => void selectPly(viewingPly - 1)}
+          title={isVariantActive ? 'Paso anterior de la variante' : 'Jugada anterior'}
+          disabled={!canGoBack}
+          onClick={handleNavPrev}
         >
           ◀
         </button>
         <span className="board-toolbar__ply">
-          {moves.length === 0 ? 'Inicio' : `${viewingPly}/${moves.length}`}
+          {isVariantActive
+            ? `Rama ${currentVariantStep}/${maxVariantIndex}`
+            : moves.length === 0
+              ? 'Inicio'
+              : `${viewingPly}/${moves.length}`}
         </span>
         <button
           type="button"
           className="icon-btn"
-          title="Jugada siguiente"
-          disabled={viewingPly >= moves.length}
-          onClick={() => void selectPly(viewingPly + 1)}
+          title={isVariantActive ? 'Paso siguiente de la variante' : 'Jugada siguiente'}
+          disabled={!canGoForward}
+          onClick={handleNavNext}
         >
           ▶
         </button>
         <button
           type="button"
           className="icon-btn"
-          title="Ir a la jugada actual"
-          disabled={viewingPly >= moves.length && !variant}
-          onClick={() => void selectPly(moves.length)}
+          title={isVariantActive ? 'Ir al final de la variante' : 'Ir a la jugada actual'}
+          disabled={!canGoForward}
+          onClick={handleNavLast}
         >
           ⏭
         </button>
-        {moves.length > 0 && (
+        {moves.length > 0 && !isVariantActive && (
           <button
             type="button"
             className={`btn ${isAutoPlaying ? 'btn--accent' : 'btn--ghost'} btn--xs auto-play-btn`}
