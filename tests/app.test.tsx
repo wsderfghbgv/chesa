@@ -3,6 +3,7 @@ import React from 'react';
 import { renderToString } from 'react-dom/server';
 import { App } from '../src/App';
 import { TrainingLabPanel } from '../src/components/TrainingLabPanel';
+import { PostGameReportView, TruncatedExplanation } from '../src/components/PostGameReportView';
 import {
   useChessStore,
   selectActiveBoardShapes,
@@ -277,6 +278,154 @@ describe('App component render test', () => {
     expect(LEVELS[2].botElo).toBe(1300);
     expect(LEVELS[7].botName).toBe('Magnus Bot');
     expect(LEVELS[7].botElo).toBe(2800);
+  });
+
+  it('PostGameReportView renderiza acordeones, chips de errores clave y barra inferior sticky', () => {
+    const mockReport: any = {
+      result: '1-0',
+      reasonText: 'Por jaque mate',
+      playerColor: 'w',
+      totalPlies: 12,
+      totalFullMoves: 6,
+      playerMoveCount: 6,
+      goodMovesTotal: 4,
+      accuracyPercent: 78,
+      averageCpLoss: 35,
+      whiteStats: {
+        accuracyPercent: 78,
+        averageCpLoss: 35,
+        goodMovesTotal: 4,
+        moveCount: 6,
+        counts: { brillante: 0, excelente: 1, mejor: 2, buena: 1, libro: 0, imprecision: 1, error: 1, error_grave: 0 },
+      },
+      blackStats: {
+        accuracyPercent: 62,
+        averageCpLoss: 72,
+        goodMovesTotal: 2,
+        moveCount: 6,
+        counts: { brillante: 0, excelente: 0, mejor: 1, buena: 1, libro: 0, imprecision: 1, error: 2, error_grave: 1 },
+      },
+      criticalMoment: {
+        ply: 5,
+        moveNumber: 3,
+        mover: 'w',
+        playedSanEs: 'd4',
+        whatHappened: 'Apertura central buscando iniciativa en el centro del tablero.',
+        classification: { category: 'buena', meta: { label: 'Buena', symbol: '👍', color: '#10b981' } },
+      },
+      mainMistake: {
+        ply: 9,
+        moveNumber: 5,
+        mover: 'w',
+        playedSanEs: 'Ag5',
+        bestSanEs: 'O-O',
+        whatHappened: 'Dejaste el caballo de f3 con menor defensa.',
+        classification: { category: 'error', meta: { label: 'Error', symbol: '⚠️', color: '#f59e0b' } },
+      },
+      criticalMistakes: [
+        {
+          ply: 9,
+          moveNumber: 5,
+          mover: 'w',
+          playedSanEs: 'Ag5',
+          bestSanEs: 'O-O',
+          whatHappened: 'Dejaste el caballo de f3 con menor defensa.',
+          classification: { category: 'error', meta: { label: 'Error', symbol: '⚠️', color: '#f59e0b' } },
+        },
+      ],
+      bestMoves: [],
+      missedOpportunities: [],
+      decisiveMoments: [],
+      strengths: ['Control inicial del centro'],
+      strategicIssues: [],
+      methodologyNote: 'Calculado con Stockfish 19',
+      trainingPlan: {
+        topThreeWeaknesses: [],
+        conceptsToStudy: [],
+        nextGameObjectives: [],
+        recommendedPuzzles: [],
+        verificationChallenge: { title: 'Comprueba tu táctica', prompt: 'Encuentra la mejor respuesta.' },
+      },
+    };
+
+    useChessStore.setState({ postGameReport: mockReport });
+    const html = renderToString(<PostGameReportView />);
+
+    expect(html).toContain('Resultado:');
+    expect(html).toContain('1-0');
+    expect(html).toContain('78%');
+    expect(html).toContain('62%');
+    expect(html).toContain('Errores clave:');
+    expect(html).toContain('J5');
+    expect(html).toContain('Momento más crítico');
+    expect(html).toContain('Principal error cometido');
+    expect(html).toContain('Estadísticas de la partida');
+    expect(html).toContain('Clasificación de jugadas (Blancas vs Negras)');
+    expect(html).toContain('report-sticky-bottom-bar');
+    expect(html).toContain('Practica tus fallos en el tablero');
+  });
+
+  it('fusiona Momento crítico y Principal error cuando hacen referencia a la misma jugada', () => {
+    const mockReportMerged: any = {
+      result: '0-1',
+      reasonText: 'Por abandono',
+      playerColor: 'w',
+      totalPlies: 10,
+      totalFullMoves: 5,
+      playerMoveCount: 5,
+      goodMovesTotal: 3,
+      accuracyPercent: 65,
+      averageCpLoss: 80,
+      criticalMoment: {
+        ply: 7,
+        moveNumber: 4,
+        mover: 'w',
+        playedSanEs: 'Cxe5',
+        whatHappened: 'Captura precipitada que pierde material.',
+        classification: { category: 'error_grave', meta: { label: 'Error grave', symbol: '❌', color: '#ef4444' } },
+      },
+      mainMistake: {
+        ply: 7,
+        moveNumber: 4,
+        mover: 'w',
+        playedSanEs: 'Cxe5',
+        bestSanEs: 'd3',
+        whatHappened: 'Captura precipitada que pierde material.',
+        classification: { category: 'error_grave', meta: { label: 'Error grave', symbol: '❌', color: '#ef4444' } },
+      },
+      criticalMistakes: [],
+      bestMoves: [],
+      missedOpportunities: [],
+      decisiveMoments: [],
+      strengths: [],
+      strategicIssues: [],
+      methodologyNote: 'Calculado con Stockfish 19',
+      trainingPlan: {
+        topThreeWeaknesses: [],
+        conceptsToStudy: [],
+        nextGameObjectives: [],
+        recommendedPuzzles: [],
+        verificationChallenge: { title: 'Desafío', prompt: 'Resolver.' },
+      },
+    };
+
+    useChessStore.setState({ postGameReport: mockReportMerged });
+    const html = renderToString(<PostGameReportView />);
+
+    expect(html).toContain('Momento crítico y principal error');
+    expect(html).toContain('Misma jugada decisiva');
+    expect(html).toContain('Cxe5');
+    expect(html).toContain('d3');
+  });
+
+  it('TruncatedExplanation renderiza botón de alternancia para textos extensos', () => {
+    const shortText = 'Jugada sólida.';
+    const shortHtml = renderToString(<TruncatedExplanation text={shortText} maxLen={50} />);
+    expect(shortHtml).not.toContain('Ver más');
+
+    const longText = 'Esta es una explicación sumamente detallada que describe cómo las piezas blancas crearon una debilidad crítica en el flanco de dama con varias frases explicativas.';
+    const longHtml = renderToString(<TruncatedExplanation text={longText} maxLen={40} />);
+    expect(longHtml).toContain('Ver más');
   });
 });
 

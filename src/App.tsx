@@ -292,7 +292,7 @@ export const App: React.FC = () => {
         </div>
 
         <div className="header-controls">
-          <label className="header-select-group header-select-group--desktop-only" title="Elegir si juegas con piezas Blancas o Negras">
+          <label className="header-select-group header-select-group--desktop-only header-select-group--color" title="Elegir si juegas con piezas Blancas o Negras">
             <span>Tus piezas</span>
             <select
               value={playerColor}
@@ -304,7 +304,7 @@ export const App: React.FC = () => {
             </select>
           </label>
 
-          <label className="header-select-group header-select-group--desktop-only">
+          <label className="header-select-group header-select-group--desktop-only header-select-group--mode">
             <span>Modo</span>
             <select
               value={mode}
@@ -319,7 +319,7 @@ export const App: React.FC = () => {
             </select>
           </label>
 
-          <label className="header-select-group header-select-group--desktop-only">
+          <label className="header-select-group header-select-group--desktop-only header-select-group--rival">
             <span>Rival</span>
             <select
               value={opponentLevelId}
@@ -334,7 +334,7 @@ export const App: React.FC = () => {
             </select>
           </label>
 
-          <label className="header-select-group header-select-group--desktop-only">
+          <label className="header-select-group header-select-group--desktop-only header-select-group--depth">
             <span>Análisis</span>
             <select
               value={analysisDepth}
@@ -520,61 +520,63 @@ export const App: React.FC = () => {
 
         {/* Columna derecha: Navegación + Cinta de Jugadas + Panel Activo */}
         <div id="coach-section" className="coach-column">
-          <nav className="workspace-tabs" aria-label="Secciones del entrenador">
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'coach' ? 'tab-btn--active' : ''}`}
-              onClick={() => handleSelectTab('coach')}
-            >
-              <span className="tab-btn__icon">🎓</span>
-              <span className="tab-btn__label">Profesor</span>
-            </button>
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'lab' ? 'tab-btn--active' : ''}`}
-              onClick={() => handleSelectTab('lab')}
-            >
-              <span className="tab-btn__icon">🧪</span>
-              <span className="tab-btn__label">Laboratorio</span>
-              {personalMistakes.some((m) => !m.mastered) && <span className="tab-dot" />}
-            </button>
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'analysis' ? 'tab-btn--active' : ''}`}
-              onClick={() => handleSelectTab('analysis')}
-            >
-              <span className="tab-btn__icon">⚙</span>
-              <span className="tab-btn__label">Motor</span>
-            </button>
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'report' ? 'tab-btn--active' : ''}`}
-              onClick={() => handleSelectTab('report')}
-            >
-              <span className="tab-btn__icon">📊</span>
-              <span className="tab-btn__label">Informe</span>
-              {postGameReport && <span className="tab-dot" />}
-            </button>
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'profile' ? 'tab-btn--active' : ''}`}
-              onClick={() => handleSelectTab('profile')}
-            >
-              <span className="tab-btn__icon">👤</span>
-              <span className="tab-btn__label">Perfil ({playerStats.totalGames})</span>
-            </button>
-            <button
-              type="button"
-              className={`tab-btn ${activeTab === 'settings' ? 'tab-btn--active' : ''}`}
-              onClick={() => handleSelectTab('settings')}
-            >
-              <span className="tab-btn__icon">🎚</span>
-              <span className="tab-btn__label">Niveles</span>
-            </button>
-          </nav>
+          <div className="coach-sticky-header">
+            <nav className="workspace-tabs" aria-label="Secciones del entrenador">
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'coach' ? 'tab-btn--active' : ''}`}
+                onClick={() => handleSelectTab('coach')}
+              >
+                <span className="tab-btn__icon">🎓</span>
+                <span className="tab-btn__label">Profesor</span>
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'lab' ? 'tab-btn--active' : ''}`}
+                onClick={() => handleSelectTab('lab')}
+              >
+                <span className="tab-btn__icon">🧪</span>
+                <span className="tab-btn__label">Laboratorio</span>
+                {personalMistakes.some((m) => !m.mastered) && <span className="tab-dot" />}
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'analysis' ? 'tab-btn--active' : ''}`}
+                onClick={() => handleSelectTab('analysis')}
+              >
+                <span className="tab-btn__icon">⚙</span>
+                <span className="tab-btn__label">Motor</span>
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'report' ? 'tab-btn--active' : ''}`}
+                onClick={() => handleSelectTab('report')}
+              >
+                <span className="tab-btn__icon">📊</span>
+                <span className="tab-btn__label">Informe</span>
+                {postGameReport && <span className="tab-dot" />}
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'profile' ? 'tab-btn--active' : ''}`}
+                onClick={() => handleSelectTab('profile')}
+              >
+                <span className="tab-btn__icon">👤</span>
+                <span className="tab-btn__label">Perfil ({playerStats.totalGames})</span>
+              </button>
+              <button
+                type="button"
+                className={`tab-btn ${activeTab === 'settings' ? 'tab-btn--active' : ''}`}
+                onClick={() => handleSelectTab('settings')}
+              >
+                <span className="tab-btn__icon">🎚</span>
+                <span className="tab-btn__label">Niveles</span>
+              </button>
+            </nav>
 
-          {/* Cinta horizontal de jugadas y gráfico desplegable */}
-          <MoveHistoryAndControls />
+            {/* Cinta horizontal de jugadas y gráfico desplegable */}
+            <MoveHistoryAndControls />
+          </div>
 
           <div className="tab-content-area" key={activeTab}>
             {activeTab === 'coach' && <CoachPanel />}

@@ -271,27 +271,27 @@ export const BoardQuickControls: React.FC = () => {
             </button>
           </>
         )}
-      </div>
 
-      {(mode !== 'no_aid' || gameOver) && (
-        <div className="board-mini-legend" aria-label="Colores de las flechas">
-          <span>
-            <i className="legend-dot legend-dot--green" /> Mejor
-          </span>
-          <span>
-            <i className="legend-dot legend-dot--blue" /> Jugada
-          </span>
-          <span>
-            <i className="legend-dot legend-dot--red" /> Peligro
-          </span>
-          <span
-            className="drawing-help-pill"
-            title="Clic derecho: dibuja flechas y sombrea casillas. Mayús: rojo, Alt: azul. Clic izquierdo en tablero: borrar."
-          >
-            🎨 Clic derecho dibuja flechas
-          </span>
-        </div>
-      )}
+        {(mode !== 'no_aid' || gameOver) && (
+          <div className="board-mini-legend" aria-label="Colores de las flechas">
+            <span>
+              <i className="legend-dot legend-dot--green" /> Mejor
+            </span>
+            <span>
+              <i className="legend-dot legend-dot--blue" /> Jugada
+            </span>
+            <span>
+              <i className="legend-dot legend-dot--red" /> Peligro
+            </span>
+            <span
+              className="drawing-help-pill"
+              title="Clic derecho: dibuja flechas y sombrea casillas. Mayús: rojo, Alt: azul. Clic izquierdo en tablero: borrar."
+            >
+              🎨 Clic derecho dibuja flechas
+            </span>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
