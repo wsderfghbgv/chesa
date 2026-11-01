@@ -16,6 +16,7 @@ export const SettingsPanel: React.FC = () => {
   const setAnalysisDepth = useChessStore((s) => s.setAnalysisDepth);
   const setThresholds = useChessStore((s) => s.setThresholds);
   const setClockConfig = useChessStore((s) => s.setClockConfig);
+  const applyTimeControlPreset = useChessStore((s) => s.applyTimeControlPreset);
   const setBoardTheme = useChessStore((s) => s.setBoardTheme);
 
   const currentLevel = getLevel(opponentLevelId);
@@ -42,7 +43,7 @@ export const SettingsPanel: React.FC = () => {
 
       {/* 1. Fuerza del rival */}
       <div className="report-section">
-        <h4>1. Fuerza del rival (cómo juega contra ti)</h4>
+        <h4>1. Rival y Bot Personalizado (cómo juega contra ti)</h4>
         <div className="levels-grid">
           {LEVELS.map((lvl) => (
             <button
@@ -52,17 +53,27 @@ export const SettingsPanel: React.FC = () => {
               onClick={() => setOpponentLevel(lvl.id)}
             >
               <div className="level-card__top">
-                <span className="level-card__idx">Nivel {lvl.index}</span>
-                <strong>{lvl.name}</strong>
+                <span className="level-bot-avatar" style={{ background: lvl.botColor }}>
+                  {lvl.botAvatar}
+                </span>
+                <div className="level-card__header-info">
+                  <div className="level-card__title-row">
+                    <span className="level-card__bot-title">{lvl.botTitle}</span>
+                    <strong>{lvl.botName}</strong>
+                    <span className="level-card__elo">({lvl.botElo})</span>
+                  </div>
+                  <span className="level-card__idx">Nivel {lvl.index} · {lvl.name}</span>
+                </div>
               </div>
+              <p className="level-card__quote">«{lvl.botQuote}»</p>
               <small>
-                Skill {lvl.skill}/20 · {lvl.depth ? `Prof. ${lvl.depth}` : 'Sin límite prof.'} · {lvl.movetime} ms
+                Skill {lvl.skill}/20 · {lvl.depth ? `Prof. ${lvl.depth}` : 'Sin límite'} · {lvl.movetime} ms
               </small>
             </button>
           ))}
         </div>
         <div className="coach-block coach-block--subtle">
-          <strong>Detalles técnicos de «{currentLevel.name}»:</strong>
+          <strong>Personalidad de «{currentLevel.botName}» ({currentLevel.name}):</strong>
           <p>{currentLevel.description}</p>
           <p className="engine-disclaimer">{LEVEL_DISCLAIMER}</p>
         </div>
@@ -159,7 +170,55 @@ export const SettingsPanel: React.FC = () => {
 
       {/* 4. Reloj y gestión del tiempo */}
       <div className="report-section">
-        <h4>4. Reloj de partida y análisis de gestión del tiempo</h4>
+        <h4>4. Reloj de partida y ritmos de juego rápidos</h4>
+        <div className="time-presets-bar">
+          <span className="presets-label">Ritmos populares:</span>
+          <div className="time-presets-grid">
+            <button
+              type="button"
+              className={`btn ${clockEnabled && clockInitialMinutes === 1 && clockIncrementSeconds === 1 ? 'btn--primary' : 'btn--ghost'} btn--xs`}
+              onClick={() => applyTimeControlPreset('bullet_1_1')}
+            >
+              ⚡ 1 | 1 Bullet
+            </button>
+            <button
+              type="button"
+              className={`btn ${clockEnabled && clockInitialMinutes === 3 && clockIncrementSeconds === 0 ? 'btn--primary' : 'btn--ghost'} btn--xs`}
+              onClick={() => applyTimeControlPreset('blitz_3_0')}
+            >
+              ⚡ 3 | 0 Blitz
+            </button>
+            <button
+              type="button"
+              className={`btn ${clockEnabled && clockInitialMinutes === 5 && clockIncrementSeconds === 0 ? 'btn--primary' : 'btn--ghost'} btn--xs`}
+              onClick={() => applyTimeControlPreset('blitz_5_0')}
+            >
+              ⚡ 5 | 0 Blitz
+            </button>
+            <button
+              type="button"
+              className={`btn ${clockEnabled && clockInitialMinutes === 10 && clockIncrementSeconds === 0 ? 'btn--primary' : 'btn--ghost'} btn--xs`}
+              onClick={() => applyTimeControlPreset('rapid_10_0')}
+            >
+              ⏱ 10 | 0 Rápida
+            </button>
+            <button
+              type="button"
+              className={`btn ${clockEnabled && clockInitialMinutes === 15 && clockIncrementSeconds === 10 ? 'btn--primary' : 'btn--ghost'} btn--xs`}
+              onClick={() => applyTimeControlPreset('rapid_15_10')}
+            >
+              ⏱ 15 | 10 Rápida
+            </button>
+            <button
+              type="button"
+              className={`btn ${!clockEnabled ? 'btn--primary' : 'btn--ghost'} btn--xs`}
+              onClick={() => applyTimeControlPreset('none')}
+            >
+              🕊 Sin reloj
+            </button>
+          </div>
+        </div>
+
         <div className="clock-settings-row">
           <label className="chk-label">
             <input

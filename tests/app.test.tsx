@@ -10,7 +10,9 @@ import {
   loadPersistedSession,
   clearPersistedSession,
 } from '../src/state/useChessStore';
-import { START_FEN } from '../src/chess/utils';
+import { Chess } from 'chess.js';
+import { START_FEN, getCapturedPieces } from '../src/chess/utils';
+import { LEVELS } from '../src/engine/levels';
 
 describe('App component render test', () => {
   it('initializes store without error', () => {
@@ -204,6 +206,77 @@ describe('App component render test', () => {
     // Y permite limpiarlas explícitamente a través de setCustomHighlightShapes([])
     useChessStore.getState().setCustomHighlightShapes([]);
     expect(useChessStore.getState().customHighlightShapes).toEqual([]);
+  });
+
+  it('calcula piezas capturadas correctamente (getCapturedPieces)', () => {
+    const startChess = new Chess();
+    const initCaptured = getCapturedPieces(startChess);
+    expect(initCaptured.capturedByWhite.p).toBe(0);
+    expect(initCaptured.capturedByBlack.p).toBe(0);
+
+    // Posición tras 1. e4 d5 2. exd5 (peón negro de d5 capturado por blancas)
+    const afterCaptureChess = new Chess('rnbqkbnr/ppp1pppp/8/3P4/8/8/PPPP1PPP/RNBQKBNR b KQkq - 0 2');
+    const res = getCapturedPieces(afterCaptureChess);
+    expect(res.capturedByWhite.p).toBe(1);
+    expect(res.capturedByBlack.p).toBe(0);
+  });
+
+  it('permite alternar el sombreado de jugadas con flechas (toggleMoveHighlightArrow)', () => {
+    const s = useChessStore.getState();
+    s.setCustomHighlightShapes([]);
+    expect(s.customHighlightShapes.length).toBe(0);
+
+    // Sombrear e2->e4
+    s.toggleMoveHighlightArrow('e2', 'e4', 'blue');
+    expect(useChessStore.getState().customHighlightShapes.length).toBe(1);
+    expect(useChessStore.getState().customHighlightShapes[0]).toEqual({
+      orig: 'e2',
+      dest: 'e4',
+      brush: 'blue',
+    });
+
+    // Al volver a sombrear la misma jugada, se desactiva
+    s.toggleMoveHighlightArrow('e2', 'e4', 'blue');
+    expect(useChessStore.getState().customHighlightShapes.length).toBe(0);
+  });
+
+  it('aplica ritmos de tiempo rápidos estilo Chess.com (applyTimeControlPreset)', () => {
+    const s = useChessStore.getState();
+
+    s.applyTimeControlPreset('bullet_1_1');
+    expect(useChessStore.getState().clockEnabled).toBe(true);
+    expect(useChessStore.getState().clockInitialMinutes).toBe(1);
+    expect(useChessStore.getState().clockIncrementSeconds).toBe(1);
+
+    s.applyTimeControlPreset('blitz_3_0');
+    expect(useChessStore.getState().clockEnabled).toBe(true);
+    expect(useChessStore.getState().clockInitialMinutes).toBe(3);
+    expect(useChessStore.getState().clockIncrementSeconds).toBe(0);
+
+    s.applyTimeControlPreset('rapid_10_0');
+    expect(useChessStore.getState().clockEnabled).toBe(true);
+    expect(useChessStore.getState().clockInitialMinutes).toBe(10);
+    expect(useChessStore.getState().clockIncrementSeconds).toBe(0);
+
+    s.applyTimeControlPreset('none');
+    expect(useChessStore.getState().clockEnabled).toBe(false);
+  });
+
+  it('todos los niveles cuentan con personalidad de Bot, avatar, elo y título', () => {
+    expect(LEVELS.length).toBe(9);
+    for (const lvl of LEVELS) {
+      expect(lvl.botName).toBeTruthy();
+      expect(lvl.botTitle).toBeTruthy();
+      expect(lvl.botAvatar).toBeTruthy();
+      expect(lvl.botElo).toBeGreaterThan(100);
+      expect(lvl.botQuote).toBeTruthy();
+    }
+    expect(LEVELS[0].botName).toBe('Martín');
+    expect(LEVELS[0].botElo).toBe(250);
+    expect(LEVELS[2].botName).toBe('Nelson');
+    expect(LEVELS[2].botElo).toBe(1300);
+    expect(LEVELS[7].botName).toBe('Magnus Bot');
+    expect(LEVELS[7].botElo).toBe(2800);
   });
 });
 

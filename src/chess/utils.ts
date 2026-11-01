@@ -131,6 +131,52 @@ export function materialBalance(chess: Chess, color: Color): number {
   return color === 'w' ? m.w - m.b : m.b - m.w;
 }
 
+export interface CapturedPieces {
+  p: number;
+  n: number;
+  b: number;
+  r: number;
+  q: number;
+}
+
+/** Calcula las piezas capturadas por cada bando a partir de la posición actual del tablero. */
+export function getCapturedPieces(chess: Chess): {
+  capturedByWhite: CapturedPieces;
+  capturedByBlack: CapturedPieces;
+} {
+  const remainingW: CapturedPieces = { p: 0, n: 0, b: 0, r: 0, q: 0 };
+  const remainingB: CapturedPieces = { p: 0, n: 0, b: 0, r: 0, q: 0 };
+
+  for (const row of chess.board()) {
+    for (const sq of row) {
+      if (!sq || sq.type === 'k') continue;
+      if (sq.color === 'w') {
+        remainingW[sq.type]++;
+      } else {
+        remainingB[sq.type]++;
+      }
+    }
+  }
+
+  const starting: CapturedPieces = { p: 8, n: 2, b: 2, r: 2, q: 1 };
+  return {
+    capturedByWhite: {
+      p: Math.max(0, starting.p - remainingB.p),
+      n: Math.max(0, starting.n - remainingB.n),
+      b: Math.max(0, starting.b - remainingB.b),
+      r: Math.max(0, starting.r - remainingB.r),
+      q: Math.max(0, starting.q - remainingB.q),
+    },
+    capturedByBlack: {
+      p: Math.max(0, starting.p - remainingW.p),
+      n: Math.max(0, starting.n - remainingW.n),
+      b: Math.max(0, starting.b - remainingW.b),
+      r: Math.max(0, starting.r - remainingW.r),
+      q: Math.max(0, starting.q - remainingW.q),
+    },
+  };
+}
+
 /** Normaliza un FEN quitando contadores (para comparar posiciones). */
 export function fenKey(fen: string): string {
   return fen.split(' ').slice(0, 4).join(' ');

@@ -3632,3 +3632,427 @@ cg-board square.checkmate-sq {
   }
 }
 
+/* ==========================================================================
+   Tarjetas de Jugador estilo Chess.com, Insignias en Tablero y Ritmos de Juego
+   ========================================================================== */
+.player-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.55rem 0.85rem;
+  background-color: var(--bg-surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--border-color);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-card);
+  transition: all 240ms cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.player-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: transparent;
+  transition: background-color 200ms ease;
+}
+
+.player-card--active {
+  border-color: rgba(34, 197, 94, 0.45);
+  box-shadow: 0 4px 18px -2px rgba(34, 197, 94, 0.18), 0 0 0 1px rgba(34, 197, 94, 0.25);
+}
+
+.player-card--active::before {
+  background: var(--accent);
+}
+
+.player-card--low-time {
+  border-color: rgba(239, 68, 68, 0.6);
+  box-shadow: 0 0 20px rgba(239, 68, 68, 0.25);
+  animation: pulseLowTime 1s infinite alternate;
+}
+
+@keyframes pulseLowTime {
+  0% {
+    border-color: rgba(239, 68, 68, 0.4);
+    box-shadow: 0 0 8px rgba(239, 68, 68, 0.2);
+  }
+  100% {
+    border-color: rgba(239, 68, 68, 0.85);
+    box-shadow: 0 0 22px rgba(239, 68, 68, 0.45);
+  }
+}
+
+.player-card__left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.player-card__avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 0.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  font-size: 1.35rem;
+  background: linear-gradient(135deg, var(--bg-elevated), var(--bg-surface));
+  border: 1px solid var(--border-color);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.22);
+  flex-shrink: 0;
+  transition: transform 200ms var(--ease-spring);
+}
+
+.player-card--active .player-card__avatar {
+  transform: scale(1.04);
+}
+
+.player-card__avatar--pulse {
+  animation: pulseSubtle 1.2s infinite ease-in-out;
+}
+
+.player-card__side-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  border: 2px solid var(--bg-surface);
+}
+
+.player-card__side-dot--w {
+  background: #ffffff;
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.8);
+}
+
+.player-card__side-dot--b {
+  background: #1e293b;
+  border-color: #64748b;
+}
+
+.player-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.player-card__header-line {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.player-card__title-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 0.1rem 0.35rem;
+  border-radius: 0.25rem;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #000;
+  letter-spacing: 0.05em;
+  line-height: 1.1;
+}
+
+.player-card__name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.player-card__rating {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.player-card__thinking-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: #f59e0b;
+  font-weight: 600;
+  background: rgba(245, 158, 11, 0.12);
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.thinking-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.thinking-dots span {
+  width: 3px;
+  height: 3px;
+  background-color: currentColor;
+  border-radius: 50%;
+  animation: thinkingDot 1.4s infinite ease-in-out both;
+}
+
+.thinking-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+.thinking-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes thinkingDot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0);
+    opacity: 0.3;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.player-card__sub-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  flex-wrap: wrap;
+}
+
+.player-card__captured {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.captured-piece-group {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.captured-piece-glyph {
+  font-size: 0.95rem;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
+}
+
+.captured-piece-count {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-left: 1px;
+}
+
+.player-card__mat-advantage {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 0.05rem 0.35rem;
+  border-radius: 0.25rem;
+}
+
+.player-card__status-text {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+}
+
+.player-card__right {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-shrink: 0;
+}
+
+.player-card__clock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  font-size: 1.12rem;
+  font-weight: 800;
+  padding: 0.32rem 0.75rem;
+  border-radius: 0.5rem;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  letter-spacing: 0.02em;
+  transition: all 200ms ease;
+  min-width: 5.2rem;
+  justify-content: center;
+}
+
+.player-card__clock--active {
+  border-color: rgba(34, 197, 94, 0.6);
+  color: #22c55e;
+  background-color: rgba(34, 197, 94, 0.12);
+  box-shadow: 0 0 14px rgba(34, 197, 94, 0.2);
+}
+
+.player-card__clock--alert {
+  border-color: #ef4444 !important;
+  color: #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.15) !important;
+  box-shadow: 0 0 16px rgba(239, 68, 68, 0.35) !important;
+  animation: clockPulse 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes clockPulse {
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.03);
+  }
+}
+
+.player-card__clock-icon {
+  font-size: 0.85rem;
+  opacity: 0.75;
+}
+
+.drawing-help-pill {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  margin-left: 0.3rem;
+  cursor: help;
+}
+
+/* Insignias de clasificación de jugada en las casillas del tablero estilo Chess.com */
+.board-move-badge {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  transform: translate(62%, -25%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6;
+  pointer-events: none;
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.45), 0 0 0 2px rgba(255, 255, 255, 0.92);
+  animation: moveBadgePop 0.28s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+@keyframes moveBadgePop {
+  0% {
+    transform: translate(62%, -25%) scale(0.3);
+    opacity: 0;
+  }
+  70% {
+    transform: translate(62%, -25%) scale(1.15);
+  }
+  100% {
+    transform: translate(62%, -25%) scale(1);
+    opacity: 1;
+  }
+}
+
+.board-move-badge__symbol {
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  user-select: none;
+}
+
+/* Estilos de botones de ritmo de tiempo rápido */
+.time-presets-bar {
+  margin-bottom: 0.85rem;
+  padding: 0.65rem;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 0.55rem;
+}
+
+.presets-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 0.45rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.time-presets-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+/* Tarjeta de Bot en ajustes */
+.level-bot-avatar {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 0.45rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.level-card__header-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.level-card__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.level-card__bot-title {
+  font-size: 0.62rem;
+  font-weight: 800;
+  background: #f59e0b;
+  color: #000;
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.2rem;
+  line-height: 1;
+}
+
+.level-card__elo {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.level-card__quote {
+  font-size: 0.78rem;
+  font-style: italic;
+  color: var(--text-muted);
+  margin: 0.35rem 0 0.25rem;
+  line-height: 1.3;
+}
+

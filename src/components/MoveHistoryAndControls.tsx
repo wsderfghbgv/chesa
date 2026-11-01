@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useChessStore, type MoveHistoryItem } from '../state/useChessStore';
 import { formatScore } from '../engine/score';
+import { parseUci } from '../chess/utils';
 import { EvalChart } from './EvalChart';
 
 /**
@@ -32,6 +33,9 @@ export const BoardQuickControls: React.FC = () => {
   const toggleAutoPlay = useChessStore((s) => s.toggleAutoPlay);
   const customHighlightShapes = useChessStore((s) => s.customHighlightShapes);
   const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
+  const toggleMoveHighlightArrow = useChessStore((s) => s.toggleMoveHighlightArrow);
+
+  const currentViewedMove = viewingPly > 0 ? moves[viewingPly - 1] : null;
 
   const boardThemeLabel: Record<'emerald' | 'wood' | 'midnight' | 'ocean', string> = {
     emerald: 'Esmeralda',
@@ -146,7 +150,20 @@ export const BoardQuickControls: React.FC = () => {
             onClick={() => setCustomHighlightShapes([])}
             title="Quitar las flechas y casillas señaladas del tablero"
           >
-            ✕ Quitar señalización
+            ✕ Quitar flechas
+          </button>
+        )}
+        {currentViewedMove && (
+          <button
+            type="button"
+            className="btn btn--ghost btn--xs"
+            onClick={() => {
+              const p = parseUci(currentViewedMove.uci);
+              toggleMoveHighlightArrow(p.from, p.to, 'blue');
+            }}
+            title={`Sombrear con flecha la jugada ${currentViewedMove.sanEs} en el tablero (o clic derecho en el tablero)`}
+          >
+            🏹 Sombrear jugada
           </button>
         )}
         <span className="board-color-chip" title={`Color con el que estás jugando (${playerColor === 'w' ? 'Blancas' : 'Negras'})`}>
@@ -274,6 +291,7 @@ export const MoveHistoryAndControls: React.FC = () => {
   const selectPly = useChessStore((s) => s.selectPly);
   const stepVariant = useChessStore((s) => s.stepVariant);
   const exitVariant = useChessStore((s) => s.exitVariant);
+  const toggleMoveHighlightArrow = useChessStore((s) => s.toggleMoveHighlightArrow);
 
   const [showChart, setShowChart] = useState(false);
 
@@ -378,7 +396,20 @@ export const MoveHistoryAndControls: React.FC = () => {
                       className={`move-inline-btn ${
                         viewingPly === row.white.ply && !variant ? 'move-inline-btn--active' : ''
                       }`}
-                      onClick={() => void selectPly(row.white!.ply)}
+                      onClick={() => {
+                        if (viewingPly === row.white!.ply) {
+                          const p = parseUci(row.white!.uci);
+                          toggleMoveHighlightArrow(p.from, p.to, 'blue');
+                        } else {
+                          void selectPly(row.white!.ply);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        const p = parseUci(row.white!.uci);
+                        toggleMoveHighlightArrow(p.from, p.to, 'blue');
+                      }}
+                      title={`${row.white.sanEs} (Clic: ver · Clic derecho: sombrear con flecha)`}
                     >
                       {row.white.sanEs}
                       {wEv && (
@@ -397,7 +428,20 @@ export const MoveHistoryAndControls: React.FC = () => {
                       className={`move-inline-btn ${
                         viewingPly === row.black.ply && !variant ? 'move-inline-btn--active' : ''
                       }`}
-                      onClick={() => void selectPly(row.black!.ply)}
+                      onClick={() => {
+                        if (viewingPly === row.black!.ply) {
+                          const p = parseUci(row.black!.uci);
+                          toggleMoveHighlightArrow(p.from, p.to, 'blue');
+                        } else {
+                          void selectPly(row.black!.ply);
+                        }
+                      }}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        const p = parseUci(row.black!.uci);
+                        toggleMoveHighlightArrow(p.from, p.to, 'blue');
+                      }}
+                      title={`${row.black.sanEs} (Clic: ver · Clic derecho: sombrear con flecha)`}
                     >
                       {row.black.sanEs}
                       {bEv && (

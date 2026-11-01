@@ -276,6 +276,8 @@ export interface ChessStoreState {
   setBoardTheme: (theme: 'emerald' | 'wood' | 'midnight' | 'ocean') => void;
   cycleBoardTheme: () => void;
   setCustomHighlightShapes: (shapes: DrawShape[]) => void;
+  toggleMoveHighlightArrow: (from: Square, to: Square, brush?: 'green' | 'blue' | 'red' | 'yellow') => void;
+  applyTimeControlPreset: (preset: 'bullet_1_1' | 'blitz_3_0' | 'blitz_5_0' | 'rapid_10_0' | 'rapid_15_10' | 'none') => void;
   toggleSound: () => void;
   toggleVoice: () => void;
   toggleThinkingCheck: () => void;
@@ -723,6 +725,42 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
   },
 
   setCustomHighlightShapes: (shapes) => set({ customHighlightShapes: shapes }),
+
+  toggleMoveHighlightArrow: (from: Square, to: Square, brush: 'green' | 'blue' | 'red' | 'yellow' = 'blue') => {
+    const cur = get().customHighlightShapes ?? [];
+    const exists = cur.some((sh) => sh.orig === from && sh.dest === to);
+    if (exists) {
+      set({ customHighlightShapes: cur.filter((sh) => !(sh.orig === from && sh.dest === to)) });
+    } else {
+      set({
+        showVisualAids: true,
+        customHighlightShapes: [...cur, { orig: from, dest: to, brush }],
+      });
+    }
+  },
+
+  applyTimeControlPreset: (preset) => {
+    switch (preset) {
+      case 'bullet_1_1':
+        get().setClockConfig(true, 1, 1);
+        break;
+      case 'blitz_3_0':
+        get().setClockConfig(true, 3, 0);
+        break;
+      case 'blitz_5_0':
+        get().setClockConfig(true, 5, 0);
+        break;
+      case 'rapid_10_0':
+        get().setClockConfig(true, 10, 0);
+        break;
+      case 'rapid_15_10':
+        get().setClockConfig(true, 15, 10);
+        break;
+      case 'none':
+        get().setClockConfig(false, 10, 0);
+        break;
+    }
+  },
 
   toggleSound: () => set((s) => ({ soundEnabled: !s.soundEnabled })),
 
@@ -1759,6 +1797,14 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     const curFen = s.fens[s.fens.length - 1];
     const stm: Color = curFen.split(' ')[1] === 'b' ? 'b' : 'w';
     const dt = Math.max(0, Math.min(1000, now - s.turnStartedAt));
+    const activeClock = stm === 'w' ? s.whiteClockMs : s.blackClockMs;
+    if (
+      activeClock > 0 &&
+      activeClock < 30000 &&
+      Math.floor((activeClock - dt) / 1000) !== Math.floor(activeClock / 1000)
+    ) {
+      playChessSound('tick', s.soundEnabled);
+    }
     if (stm === 'w') {
       const nextW = Math.max(0, s.whiteClockMs - dt);
       set({ whiteClockMs: nextW, turnStartedAt: now });

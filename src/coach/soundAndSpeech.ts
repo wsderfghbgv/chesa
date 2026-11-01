@@ -15,7 +15,8 @@ export type ChessSoundType =
   | 'promote'
   | 'gameOver'
   | 'success'
-  | 'mistake';
+  | 'mistake'
+  | 'tick';
 
 let sharedAudioCtx: AudioContext | null = null;
 
@@ -35,6 +36,42 @@ function getAudioContext(): AudioContext | null {
     return sharedAudioCtx;
   } catch {
     return null;
+  }
+}
+
+/** Reproduce un impacto acústico similar a una pieza de ajedrez de madera */
+function playWoodClick(
+  ctx: AudioContext,
+  freq: number,
+  durationSec: number,
+  gainVal = 0.15,
+  delaySec = 0,
+): void {
+  try {
+    const start = ctx.currentTime + delaySec;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    const filter = ctx.createBiquadFilter();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, start);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq * 0.45), start + durationSec);
+
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1400, start);
+    filter.frequency.exponentialRampToValueAtTime(300, start + durationSec);
+
+    gain.gain.setValueAtTime(gainVal, start);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + durationSec);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(start);
+    osc.stop(start + durationSec);
+  } catch {
+    // Silencio seguro en entornos sin soporte de audio
   }
 }
 
@@ -71,24 +108,31 @@ export function playChessSound(type: ChessSoundType, enabled = true): void {
 
   switch (type) {
     case 'move':
-      playTone(ctx, 290, 0.065, 'triangle', 0.11);
+      playWoodClick(ctx, 380, 0.055, 0.22);
+      playTone(ctx, 160, 0.045, 'sine', 0.12, 0.005);
       break;
     case 'capture':
-      playTone(ctx, 195, 0.08, 'sawtooth', 0.12);
-      playTone(ctx, 145, 0.07, 'triangle', 0.1, 0.03);
+      playWoodClick(ctx, 290, 0.075, 0.28);
+      playWoodClick(ctx, 130, 0.09, 0.22, 0.02);
       break;
     case 'check':
-      playTone(ctx, 587.33, 0.11, 'sine', 0.14);
-      playTone(ctx, 880, 0.16, 'sine', 0.14, 0.07);
+      playWoodClick(ctx, 420, 0.05, 0.2);
+      playTone(ctx, 587.33, 0.12, 'sine', 0.16, 0.02);
+      playTone(ctx, 880, 0.18, 'sine', 0.15, 0.08);
       break;
     case 'castle':
-      playTone(ctx, 270, 0.06, 'triangle', 0.11);
-      playTone(ctx, 340, 0.07, 'triangle', 0.11, 0.07);
+      playWoodClick(ctx, 360, 0.05, 0.2);
+      playWoodClick(ctx, 310, 0.055, 0.22, 0.08);
       break;
     case 'promote':
-      playTone(ctx, 440, 0.09, 'sine', 0.12);
-      playTone(ctx, 554.37, 0.09, 'sine', 0.12, 0.08);
-      playTone(ctx, 659.25, 0.14, 'sine', 0.13, 0.16);
+      playWoodClick(ctx, 350, 0.05, 0.18);
+      playTone(ctx, 440, 0.09, 'sine', 0.14, 0.04);
+      playTone(ctx, 554.37, 0.09, 'sine', 0.14, 0.11);
+      playTone(ctx, 659.25, 0.16, 'sine', 0.15, 0.18);
+      break;
+    case 'tick':
+      // Sonido sutil de tic de reloj mecánico cuando quedan menos de 30 segundos
+      playWoodClick(ctx, 1200, 0.015, 0.05);
       break;
     case 'success':
       playTone(ctx, 523.25, 0.09, 'sine', 0.12);

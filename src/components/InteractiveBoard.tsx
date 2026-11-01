@@ -6,6 +6,7 @@ import type { Key, SquareClasses } from '@lichess-org/chessground/types';
 import type { DrawShape } from '@lichess-org/chessground/draw';
 import { type Color, legalDests, isPromotion } from '../chess/utils';
 import { kingSquare } from '../chess/features';
+import { CATEGORIES, type MoveCategory } from '../coach/classify';
 
 interface InteractiveBoardProps {
   fen: string;
@@ -15,6 +16,7 @@ interface InteractiveBoardProps {
   allowBothSides?: boolean;
   lastMove?: [Square, Square] | null;
   shapes: DrawShape[];
+  activeBadge?: { square: Square; category: MoveCategory } | null;
   vulnerableSquares?: Square[];
   isVariantMode?: boolean;
   showSquareLabels?: boolean;
@@ -58,6 +60,7 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
   allowBothSides = false,
   lastMove,
   shapes,
+  activeBadge = null,
   vulnerableSquares = [],
   isVariantMode = false,
   showSquareLabels = true,
@@ -103,6 +106,12 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
         enabled: true,
         visible: true,
         eraseOnMovablePieceClick: false,
+        brushes: {
+          green: { key: 'g', color: '#22c55e', opacity: 0.85, lineWidth: 10 },
+          red: { key: 'r', color: '#ef4444', opacity: 0.85, lineWidth: 10 },
+          blue: { key: 'b', color: '#3b82f6', opacity: 0.85, lineWidth: 10 },
+          yellow: { key: 'y', color: '#eab308', opacity: 0.85, lineWidth: 10 },
+        },
       },
     });
     cgRef.current = api;
@@ -225,11 +234,16 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
   const files = orientation === 'w' ? ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] : ['h', 'g', 'f', 'e', 'd', 'c', 'b', 'a'];
   const ranks = orientation === 'w' ? ['8', '7', '6', '5', '4', '3', '2', '1'] : ['1', '2', '3', '4', '5', '6', '7', '8'];
   const impactPos = moveImpact ? squareToPercentCoords(moveImpact.square, orientation) : null;
+  const badgePos = activeBadge ? squareToPercentCoords(activeBadge.square, orientation) : null;
 
   return (
     <div
       className={`board-shell ${isVariantMode ? 'board-shell--variant' : ''}`}
       data-board-theme={boardTheme}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
     >
       <div ref={boardRef} className="cg-board-host cg-wrap" />
       {moveImpact && impactPos && (
@@ -239,6 +253,22 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
           style={{ left: impactPos.left, top: impactPos.top }}
           aria-hidden="true"
         />
+      )}
+      {activeBadge && badgePos && (
+        <div
+          className={`board-move-badge board-move-badge--${activeBadge.category}`}
+          style={{
+            left: badgePos.left,
+            top: badgePos.top,
+            backgroundColor: CATEGORIES[activeBadge.category]?.color ?? '#10b981',
+          }}
+          title={`${CATEGORIES[activeBadge.category]?.label ?? 'Jugada'} en ${activeBadge.square}`}
+          aria-label={`Clasificación de jugada: ${CATEGORIES[activeBadge.category]?.label}`}
+        >
+          <span className="board-move-badge__symbol" aria-hidden="true">
+            {CATEGORIES[activeBadge.category]?.symbol ?? '★'}
+          </span>
+        </div>
       )}
       {showSquareLabels && (
         <div className="square-labels-overlay" aria-hidden="true">
