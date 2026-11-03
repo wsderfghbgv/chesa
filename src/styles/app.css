@@ -521,6 +521,7 @@ html, body {
 .board-stage {
   flex: 1 1 0%;
   min-height: 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -529,12 +530,13 @@ html, body {
   max-width: 100%;
   box-sizing: border-box;
   overflow: hidden;
+  position: relative;
 }
 
 .eval-bar {
   position: relative;
   width: 24px;
-  height: 100%;
+  height: var(--board-size, 100%);
   max-height: 100%;
   border-radius: 0.52rem;
   overflow: hidden;
@@ -610,11 +612,12 @@ html, body {
 
 .board-shell {
   position: relative;
-  height: 100%;
+  width: var(--board-size, min(calc(100% - 32px), calc(100dvh - 180px)));
+  height: var(--board-size, min(calc(100% - 32px), calc(100dvh - 180px)));
+  max-width: 100%;
   max-height: 100%;
   aspect-ratio: 1 / 1;
-  width: auto;
-  max-width: calc(100% - 32px);
+  flex-shrink: 0;
   border-radius: 0.85rem;
   overflow: hidden;
   border: 3px solid rgba(148, 163, 184, 0.25);
@@ -688,15 +691,14 @@ html, body {
   padding-right: 3px;
 }
 
-/* Piezas con volumen sutil y elevación al arrastrar */
+/* Piezas con volumen nítido y elevación al arrastrar (optimizado para Retina y WebKit) */
 .cg-wrap piece {
-  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.28));
-  transition: filter 150ms ease;
-  will-change: transform;
+  transition: opacity 150ms ease;
+  -webkit-font-smoothing: antialiased;
 }
 
 .cg-wrap piece.dragging {
-  filter: drop-shadow(0 16px 22px rgba(0, 0, 0, 0.52)) brightness(1.05);
+  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.5)) brightness(1.05);
   z-index: 20 !important;
 }
 
@@ -2897,9 +2899,9 @@ cg-board square.checkmate-sq {
   }
 
   .board-stage {
-    display: grid;
-    grid-template-columns: 22px 1fr;
-    align-items: stretch;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     gap: 0.35rem;
     width: 100%;
     max-width: 100%;
@@ -2911,16 +2913,16 @@ cg-board square.checkmate-sq {
 
   .eval-bar {
     width: 22px;
-    height: 100%;
-    min-height: 100%;
+    height: var(--board-size, 100%);
+    min-height: 200px;
     border-radius: 0.45rem;
     flex-shrink: 0;
   }
 
   .board-shell {
     position: relative;
-    width: 100%;
-    height: auto;
+    width: var(--board-size, 100%);
+    height: var(--board-size, 100%);
     aspect-ratio: 1 / 1;
     max-width: 100%;
     border-radius: 0.65rem;

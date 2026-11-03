@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Chess, type Square } from 'chess.js';
 import {
   useChessStore,
@@ -261,6 +261,50 @@ export const App: React.FC = () => {
   const topIsPlayer = topColor === playerColor;
   const bottomIsPlayer = bottomColor === playerColor;
 
+  const boardStageRef = useRef<HTMLDivElement | null>(null);
+  const [boardSize, setBoardSize] = useState<number | null>(null);
+
+  useEffect(() => {
+    const stage = boardStageRef.current;
+    if (!stage || typeof ResizeObserver === 'undefined') return;
+
+    let rafId: number | null = null;
+    const updateSize = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        rafId = null;
+        if (!boardStageRef.current) return;
+        const rect = boardStageRef.current.getBoundingClientRect();
+        const stageW = rect.width;
+        const stageH = rect.height;
+        if (stageW <= 0 || stageH <= 0) return;
+
+        // Descontar ancho de la barra de evaluación (~24px) y separación (~8px)
+        const evalBarOffset = 32;
+        const isMobile = window.innerWidth <= 900;
+        const availW = Math.max(120, stageW - evalBarOffset);
+        // En móvil el scroll vertical permite usar todo el ancho sin forzar límites de alto
+        const availH = isMobile ? availW : Math.max(120, stageH);
+        const raw = Math.min(availW, availH);
+        // Redondear estrictamente a múltiplo de 8 para evitar costuras subpíxel en pantallas Retina
+        const snapped = Math.max(200, Math.floor(raw / 8) * 8);
+
+        setBoardSize((prev) => (prev !== snapped ? snapped : prev));
+      });
+    };
+
+    updateSize();
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(stage);
+    window.addEventListener('resize', updateSize);
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      ro.disconnect();
+      window.removeEventListener('resize', updateSize);
+    };
+  }, []);
+
   return (
     <div className="app-shell" data-theme={theme}>
       <Toaster />
@@ -409,7 +453,13 @@ export const App: React.FC = () => {
           />
 
           {/* Contenedor del tablero + barra de evaluación */}
-          <div className={`board-stage ${engineStatus === 'loading' ? 'board-stage--loading' : ''}`}>
+          <div
+            ref={boardStageRef}
+            className={`board-stage ${engineStatus === 'loading' ? 'board-stage--loading' : ''}`}
+            style={{
+              '--board-size': boardSize ? `${boardSize}px` : undefined,
+            } as React.CSSProperties}
+          >
             {engineStatus === 'loading' && (
               <div className="board-loading-overlay" role="status" aria-live="polite">
                 <span className="board-loading-overlay__spinner" aria-hidden="true" />
@@ -422,6 +472,7 @@ export const App: React.FC = () => {
               hidden={mode === 'no_aid' && !gameOver}
               depth={liveLines?.depth}
               delta={evalDelta}
+              boardHeight={boardSize}
             />
             <InteractiveBoard
               fen={displayedFen}
@@ -436,6 +487,7 @@ export const App: React.FC = () => {
               isVariantMode={Boolean(variant?.active)}
               showSquareLabels={showSquareLabelsOnBoard}
               boardTheme={boardTheme}
+              boardSize={boardSize}
               onMove={(from, to, promo) => playUserMove(from, to, promo)}
             />
           </div>

@@ -21,6 +21,7 @@ interface InteractiveBoardProps {
   isVariantMode?: boolean;
   showSquareLabels?: boolean;
   boardTheme?: 'emerald' | 'wood' | 'midnight' | 'ocean';
+  boardSize?: number | null;
   onMove: (from: Square, to: Square, promotion?: PieceSymbol) => void | boolean | Promise<boolean | void>;
 }
 
@@ -65,6 +66,7 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
   isVariantMode = false,
   showSquareLabels = true,
   boardTheme = 'emerald',
+  boardSize = null,
   onMove,
 }) => {
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -116,21 +118,37 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
     });
     cgRef.current = api;
 
-    // Observador de cambio de tamaño para recalcular geometría de casillas y piezas al rotar o redimensionar
+    // Observador de cambio de tamaño con debouncing para evitar bucles de layout en Safari/WebKit
     let ro: ResizeObserver | null = null;
+    let rafId: number | null = null;
     if (typeof ResizeObserver !== 'undefined' && boardRef.current) {
       ro = new ResizeObserver(() => {
-        api.redrawAll();
+        if (rafId !== null) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          api.redrawAll();
+        });
       });
       ro.observe(boardRef.current);
     }
 
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
       ro?.disconnect();
       api.destroy();
       cgRef.current = null;
     };
   }, []);
+
+  // Redibujar tablero cuando el tamaño calculado cambie
+  useEffect(() => {
+    if (cgRef.current && boardSize) {
+      const raf = requestAnimationFrame(() => {
+        cgRef.current?.redrawAll();
+      });
+      return () => cancelAnimationFrame(raf);
+    }
+  }, [boardSize]);
 
   useEffect(() => {
     const api = cgRef.current;
@@ -240,6 +258,7 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
     <div
       className={`board-shell ${isVariantMode ? 'board-shell--variant' : ''}`}
       data-board-theme={boardTheme}
+      style={boardSize ? { width: `${boardSize}px`, height: `${boardSize}px` } : undefined}
       onContextMenu={(e) => {
         e.preventDefault();
         e.stopPropagation();

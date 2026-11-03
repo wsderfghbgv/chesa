@@ -10,13 +10,15 @@ interface EvalBarProps {
     cp: number;
     text: string;
   } | null;
+  boardHeight?: number | null;
 }
 
-export const EvalBar: React.FC<EvalBarProps> = ({ score, orientation, hidden, depth, delta }) => {
+export const EvalBar: React.FC<EvalBarProps> = ({ score, orientation, hidden, depth, delta, boardHeight }) => {
   if (hidden) {
     return (
       <div
         className="eval-bar eval-bar--hidden"
+        style={boardHeight ? { height: `${boardHeight}px` } : undefined}
         title="Barra de evaluación oculta en Modo Entrenamiento sin ayuda"
         aria-label="Evaluación oculta durante la partida"
       >
@@ -35,6 +37,7 @@ export const EvalBar: React.FC<EvalBarProps> = ({ score, orientation, hidden, de
   return (
     <div
       className={`eval-bar ${topIsBlack ? '' : 'eval-bar--flipped'}`}
+      style={boardHeight ? { height: `${boardHeight}px` } : undefined}
       role="meter"
       aria-label={`Evaluación del motor: ${label}${depth ? ` (profundidad ${depth})` : ''}`}
       title={`Evaluación Stockfish (blancas): ${label}${depth ? ` · Profundidad ${depth}` : ''}${cpWhite > 20 ? ' · Ventaja Blanca' : cpWhite < -20 ? ' · Ventaja Negra' : ' · Posición igualada'}`}
