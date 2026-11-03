@@ -304,8 +304,8 @@ export const App: React.FC = () => {
             </select>
           </label>
 
-          <label className="header-select-group header-select-group--desktop-only header-select-group--mode">
-            <span>Modo</span>
+          <label className="header-select-group header-select-group--mode" title="Cambiar modo de juego o entrenamiento">
+            <span className="header-select-label">Modo</span>
             <select
               value={mode}
               onChange={(e) => void setMode(e.target.value as GameMode)}
@@ -570,7 +570,7 @@ export const App: React.FC = () => {
                 onClick={() => handleSelectTab('settings')}
               >
                 <span className="tab-btn__icon">🎚</span>
-                <span className="tab-btn__label">Niveles</span>
+                <span className="tab-btn__label">Modos y Niveles</span>
               </button>
             </nav>
 

@@ -2314,6 +2314,53 @@ cg-board square.checkmate-sq {
   font-size: 0.83rem;
 }
 
+.modes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+}
+
+.mode-card {
+  text-align: left;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.58rem;
+  background-color: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: transform 180ms var(--ease-spring), border-color 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mode-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-highlight);
+  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.25);
+}
+
+.mode-card--active {
+  border-color: var(--accent);
+  background-color: var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent), 0 6px 18px -4px var(--accent-glow);
+}
+
+.mode-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+}
+
+.mode-card__desc {
+  font-size: 0.76rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+  margin: 0;
+}
+
 .levels-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
@@ -2682,6 +2729,24 @@ cg-board square.checkmate-sq {
 
   .header-settings-shortcut {
     display: inline-flex;
+  }
+
+  .header-select-group--mode {
+    display: inline-flex;
+    padding: 0.15rem 0.35rem;
+    font-size: 0.72rem;
+    max-width: 145px;
+    flex-shrink: 1;
+  }
+
+  .header-select-group--mode .header-select-label {
+    display: none;
+  }
+
+  .header-select-group--mode select {
+    max-width: 135px;
+    font-size: 0.72rem;
+    text-overflow: ellipsis;
   }
 
   .top-header {
@@ -3071,6 +3136,7 @@ cg-board square.checkmate-sq {
     display: none;
   }
 
+  .modes-grid,
   .levels-grid {
     grid-template-columns: 1fr;
   }

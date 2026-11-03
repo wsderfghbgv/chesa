@@ -2,8 +2,10 @@ import React from 'react';
 import { useChessStore } from '../state/useChessStore';
 import { LEVELS, LEVEL_DISCLAIMER, getLevel } from '../engine/levels';
 import { DEFAULT_THRESHOLDS } from '../coach/classify';
+import { GAME_MODE_LABELS, type GameMode } from '../storage/db';
 
 export const SettingsPanel: React.FC = () => {
+  const mode = useChessStore((s) => s.mode);
   const opponentLevelId = useChessStore((s) => s.opponentLevelId);
   const analysisDepth = useChessStore((s) => s.analysisDepth);
   const thresholds = useChessStore((s) => s.thresholds);
@@ -12,6 +14,7 @@ export const SettingsPanel: React.FC = () => {
   const clockIncrementSeconds = useChessStore((s) => s.clockIncrementSeconds);
   const boardTheme = useChessStore((s) => s.boardTheme);
 
+  const setMode = useChessStore((s) => s.setMode);
   const setOpponentLevel = useChessStore((s) => s.setOpponentLevel);
   const setAnalysisDepth = useChessStore((s) => s.setAnalysisDepth);
   const setThresholds = useChessStore((s) => s.setThresholds);
@@ -41,9 +44,38 @@ export const SettingsPanel: React.FC = () => {
         <h3>Configuración del Entrenador y del Motor</h3>
       </div>
 
-      {/* 1. Fuerza del rival */}
+      {/* 1. Modalidad de entrenamiento y juego */}
       <div className="report-section">
-        <h4>1. Rival y Bot Personalizado (cómo juega contra ti)</h4>
+        <div className="section-title-row">
+          <h4>1. Modo de Juego y Entrenamiento</h4>
+          <span className="pill pill--accent pill--xs">
+            {GAME_MODE_LABELS[mode].title.split('·')[0].trim()}
+          </span>
+        </div>
+        <div className="modes-grid">
+          {(Object.keys(GAME_MODE_LABELS) as GameMode[]).map((m) => {
+            const isSelected = mode === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                className={`mode-card ${isSelected ? 'mode-card--active' : ''}`}
+                onClick={() => void setMode(m)}
+              >
+                <div className="mode-card__top">
+                  <strong>{GAME_MODE_LABELS[m].title}</strong>
+                  {isSelected && <span className="pill pill--accent pill--xs">✓ En uso</span>}
+                </div>
+                <p className="mode-card__desc">{GAME_MODE_LABELS[m].subtitle}</p>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Fuerza del rival */}
+      <div className="report-section">
+        <h4>2. Rival y Bot Personalizado (cómo juega contra ti)</h4>
         <div className="levels-grid">
           {LEVELS.map((lvl) => (
             <button
@@ -79,9 +111,9 @@ export const SettingsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Profundidad del análisis del profesor */}
+      {/* 3. Profundidad del análisis del profesor */}
       <div className="report-section">
-        <h4>2. Profundidad del análisis del profesor (cómo evalúa tus jugadas)</h4>
+        <h4>3. Profundidad del análisis del profesor (cómo evalúa tus jugadas)</h4>
         <p className="muted-text">
           Esta opción es <strong>totalmente independiente</strong> de la fuerza del rival: aunque
           juegues contra el nivel Principiante, el entrenador analiza tus movimientos con toda la
@@ -102,10 +134,10 @@ export const SettingsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Criterios configurables de clasificación de jugadas */}
+      {/* 4. Criterios configurables de clasificación de jugadas */}
       <div className="report-section">
         <div className="section-title-row">
-          <h4>3. Criterios de clasificación de jugadas (umbrales en centipeones efectivos)</h4>
+          <h4>4. Criterios de clasificación de jugadas (umbrales en centipeones efectivos)</h4>
           <button
             type="button"
             className="btn btn--ghost btn--xs"
@@ -168,9 +200,9 @@ export const SettingsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Reloj y gestión del tiempo */}
+      {/* 5. Reloj y gestión del tiempo */}
       <div className="report-section">
-        <h4>4. Reloj de partida y ritmos de juego rápidos</h4>
+        <h4>5. Reloj de partida y ritmos de juego rápidos</h4>
         <div className="time-presets-bar">
           <span className="presets-label">Ritmos populares:</span>
           <div className="time-presets-grid">
@@ -259,9 +291,9 @@ export const SettingsPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 5. Estilo visual del tablero */}
+      {/* 6. Estilo visual del tablero */}
       <div className="report-section">
-        <h4>5. Estilo visual del tablero</h4>
+        <h4>6. Estilo visual del tablero</h4>
         <div className="levels-grid">
           {boardThemes.map((bt) => (
             <button
