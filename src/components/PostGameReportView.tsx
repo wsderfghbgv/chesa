@@ -1,9 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import type { DrawShape } from '@lichess-org/chessground/draw';
 import { useChessStore } from '../state/useChessStore';
 import { CATEGORIES, type MoveCategory } from '../coach/classify';
 import { EvalChart } from './EvalChart';
 import { isSpeechSupported } from '../coach/soundAndSpeech';
 import { EasyExplanation } from './EasyExplanation';
+import { parseUci } from '../chess/utils';
 import type { MoveEvaluation } from '../coach/explain';
 import type { PostGameReport } from '../coach/postGame';
 
@@ -131,6 +133,7 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
   const batchAnalysisProgress = useChessStore((s) => s.batchAnalysisProgress);
   const moves = useChessStore((s) => s.moves);
   const moveEvaluations = useChessStore((s) => s.moveEvaluations);
+  const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
 
   // Estados de acordeones colapsables (cerrados por defecto)
   const [criticalOpen, setCriticalOpen] = useState(false);
@@ -186,9 +189,53 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
     return Array.from(map.values()).sort((a, b) => a.ply - b.ply);
   }, [report.criticalMoment, report.mainMistake, report.criticalMistakes]);
 
-  // Al seleccionar en el tablero, saltamos a la jugada sin abandonar el informe
-  const handleJumpToMove = (ply: number) => {
+  // Al pulsar "Ver en tablero": saltar a la jugada, iluminar flechas en el tablero, cambiar al Profesor y enfocar el tablero
+  const handleJumpToMove = (ply: number, evalItem?: MoveEvaluation) => {
+    const ev =
+      evalItem ??
+      (report.criticalMoment?.ply === ply ? report.criticalMoment : null) ??
+      (report.mainMistake?.ply === ply ? report.mainMistake : null) ??
+      (report.bestMoveOfGame?.ply === ply ? report.bestMoveOfGame : null) ??
+      report.criticalMistakes.find((e) => e.ply === ply) ??
+      report.bestMoves.find((e) => e.ply === ply) ??
+      report.decisiveMoments.find((e) => e.ply === ply) ??
+      moveEvaluations[ply];
+
+    if (ev && !moveEvaluations[ply]) {
+      useChessStore.setState((s) => ({
+        moveEvaluations: { ...s.moveEvaluations, [ply]: ev },
+      }));
+    }
+
     void selectPly(ply);
+
+    if (ev) {
+      try {
+        const pPlayed = parseUci(ev.playedUci);
+        const pBest = parseUci(ev.bestUci);
+        const shapes: DrawShape[] = [
+          { orig: pPlayed.from, dest: pPlayed.to, brush: 'blue' },
+          { orig: pPlayed.to, brush: 'yellow' },
+        ];
+        if (ev.bestUci !== ev.playedUci) {
+          shapes.push({ orig: pBest.from, dest: pBest.to, brush: 'green' });
+        }
+        setCustomHighlightShapes(shapes);
+      } catch {
+        // Ignorar error de parseo si ocurre
+      }
+    }
+
+    setActiveTab('coach');
+
+    if (typeof window !== 'undefined') {
+      window.requestAnimationFrame(() => {
+        const boardEl = document.querySelector('.board-stage') || document.querySelector('.board-column');
+        if (boardEl) {
+          boardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    }
   };
 
   const handleStartMistakePractice = () => {
@@ -222,9 +269,24 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
     });
   };
 
-  // Al pulsar un chip de error: saltar en tablero, expandir tarjeta y hacer scroll suave
+  // Al pulsar un chip de error: saltar en tablero, iluminar flechas, expandir tarjeta y hacer scroll suave
   const handleSelectMistakeChip = (m: MoveEvaluation) => {
     void selectPly(m.ply);
+
+    try {
+      const pPlayed = parseUci(m.playedUci);
+      const pBest = parseUci(m.bestUci);
+      const shapes: DrawShape[] = [
+        { orig: pPlayed.from, dest: pPlayed.to, brush: 'blue' },
+        { orig: pPlayed.to, brush: 'yellow' },
+      ];
+      if (m.bestUci !== m.playedUci) {
+        shapes.push({ orig: pBest.from, dest: pBest.to, brush: 'green' });
+      }
+      setCustomHighlightShapes(shapes);
+    } catch {
+      // Ignorar error de parseo si ocurre
+    }
 
     if (isMergedCriticalAndMistake && m.ply === report.criticalMoment?.ply) {
       setMergedCardOpen(true);
@@ -444,7 +506,12 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
               <button
                 type="button"
                 className="btn btn--secondary btn--xs"
-                onClick={() => handleJumpToMove(report.criticalMoment!.ply)}
+                onClick={() =>
+                  handleJumpToMove(
+                    report.criticalMoment!.ply,
+                    report.mainMistake ?? report.criticalMoment!,
+                  )
+                }
               >
                 👁 Ver en tablero
               </button>
@@ -481,7 +548,12 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
             <button
               type="button"
               className="btn btn--secondary btn--xs"
-              onClick={() => handleJumpToMove(report.criticalMoment!.ply)}
+              onClick={() =>
+                handleJumpToMove(
+                  report.criticalMoment!.ply,
+                  report.criticalMoment!,
+                )
+              }
             >
               👁 Ver momento crítico en tablero
             </button>
@@ -507,7 +579,12 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
               <button
                 type="button"
                 className="btn btn--secondary btn--xs"
-                onClick={() => handleJumpToMove(report.mainMistake!.ply)}
+                onClick={() =>
+                  handleJumpToMove(
+                    report.mainMistake!.ply,
+                    report.mainMistake!,
+                  )
+                }
               >
                 👁 Ver en tablero
               </button>
@@ -546,7 +623,12 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
             <button
               type="button"
               className="btn btn--secondary btn--xs"
-              onClick={() => handleJumpToMove(report.bestMoveOfGame!.ply)}
+              onClick={() =>
+                handleJumpToMove(
+                  report.bestMoveOfGame!.ply,
+                  report.bestMoveOfGame!,
+                )
+              }
             >
               👁 Ver jugada en el tablero
             </button>
@@ -676,7 +758,7 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
                   <button
                     type="button"
                     className="report-move-btn"
-                    onClick={() => handleJumpToMove(ev.ply)}
+                    onClick={() => handleJumpToMove(ev.ply, ev)}
                   >
                     <strong>
                       {ev.moveNumber}
@@ -704,7 +786,7 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
                   <button
                     type="button"
                     className="report-move-btn"
-                    onClick={() => handleJumpToMove(ev.ply)}
+                    onClick={() => handleJumpToMove(ev.ply, ev)}
                   >
                     <strong>
                       {ev.moveNumber}
@@ -734,7 +816,7 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
                   <button
                     type="button"
                     className="report-move-btn"
-                    onClick={() => handleJumpToMove(ev.ply)}
+                    onClick={() => handleJumpToMove(ev.ply, ev)}
                   >
                     <strong>
                       Jugada {ev.moveNumber}: jugaste {ev.playedSanEs} en lugar de {ev.bestSanEs}
@@ -758,7 +840,7 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
                   <button
                     type="button"
                     className="report-move-btn"
-                    onClick={() => handleJumpToMove(ev.ply)}
+                    onClick={() => handleJumpToMove(ev.ply, ev)}
                   >
                     <strong>
                       Turno {ev.moveNumber} ({ev.playedSanEs}): {ev.deltaText}

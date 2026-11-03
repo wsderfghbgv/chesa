@@ -2523,7 +2523,8 @@ async function requestOptionalLlmExplanation(ev: MoveEvaluation) {
 export function selectActiveBoardShapes(state: ChessStoreState): DrawShape[] {
   const custom = state.customHighlightShapes ?? [];
   // En modo sin ayuda solo se ocultan las ayudas DURANTE la partida; al terminar (gameOver) se desbloquean todas.
-  if (!state.showVisualAids || (state.mode === 'no_aid' && !state.gameOver)) return [];
+  if (state.mode === 'no_aid' && !state.gameOver) return [];
+  if (!state.showVisualAids) return custom;
 
   if (state.variant?.active) {
     const shapes: DrawShape[] = [...custom];

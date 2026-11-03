@@ -6,7 +6,7 @@
  *   al pasar el ratón o pulsar sobre ella, ILUMINA esa casilla exacta en el tablero y explica dónde está
  *   visualmente (abajo/arriba/centro/izquierda/derecha).
  */
-import React from 'react';
+import React, { useState } from 'react';
 import type { Square } from 'chess.js';
 import { humanizeChessText, describeSquareVisually } from '../chess/humanLanguage';
 import { useChessStore } from '../state/useChessStore';
@@ -21,25 +21,37 @@ export const EasyExplanation: React.FC<EasyExplanationProps> = ({ text }) => {
   const simpleLanguageMode = useChessStore((s) => s.simpleLanguageMode);
   const orientation = useChessStore((s) => s.orientation);
   const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
+  const [selectedSq, setSelectedSq] = useState<Square | null>(null);
 
   const processed = simpleLanguageMode ? humanizeChessText(text) : text;
   const parts = processed.split(SQUARE_SPLIT_REGEX);
 
-  const handleHighlight = (sq: Square, scrollToBoardIfMobile = false) => {
-    setCustomHighlightShapes([{ orig: sq, brush: 'yellow' }]);
-    if (scrollToBoardIfMobile && typeof window !== 'undefined' && window.innerWidth <= 720) {
-      const boardEl = document.querySelector('.board-stage');
-      if (boardEl) {
-        const rect = boardEl.getBoundingClientRect();
-        if (rect.top < 0 || rect.bottom > window.innerHeight) {
+  const handleClickSquare = (sq: Square) => {
+    if (selectedSq === sq) {
+      setSelectedSq(null);
+      setCustomHighlightShapes([]);
+    } else {
+      setSelectedSq(sq);
+      setCustomHighlightShapes([{ orig: sq, brush: 'yellow' }]);
+      if (typeof window !== 'undefined') {
+        const boardEl = document.querySelector('.board-stage') || document.querySelector('.board-column');
+        if (boardEl) {
           boardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }
     }
   };
 
-  const handleClear = () => {
-    setCustomHighlightShapes([]);
+  const handleMouseEnter = (sq: Square) => {
+    if (!selectedSq) {
+      setCustomHighlightShapes([{ orig: sq, brush: 'yellow' }]);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (!selectedSq) {
+      setCustomHighlightShapes([]);
+    }
   };
 
   return (
@@ -48,15 +60,16 @@ export const EasyExplanation: React.FC<EasyExplanationProps> = ({ text }) => {
         if (/^[a-h][1-8]$/.test(part)) {
           const sq = part as Square;
           const visualWhere = describeSquareVisually(sq, orientation);
+          const isSelected = selectedSq === sq;
           return (
             <button
               key={`${idx}-${sq}`}
               type="button"
-              className="sq-interactive-chip"
-              title={`Casilla ${sq} (${visualWhere}) — Pasa el ratón o haz clic para iluminarla en el tablero`}
-              onMouseEnter={() => handleHighlight(sq, false)}
-              onMouseLeave={handleClear}
-              onClick={() => handleHighlight(sq, true)}
+              className={`sq-interactive-chip ${isSelected ? 'sq-interactive-chip--active' : ''}`}
+              title={`Casilla ${sq} (${visualWhere}) — Pulsa para fijarla en el tablero`}
+              onMouseEnter={() => handleMouseEnter(sq)}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => handleClickSquare(sq)}
             >
               📍 {sq}
               {simpleLanguageMode && (
