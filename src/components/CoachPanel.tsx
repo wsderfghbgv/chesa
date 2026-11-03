@@ -99,21 +99,6 @@ export const CoachPanel: React.FC = () => {
     highlightUciOnBoard(uci, brush, true);
   };
 
-  const handlePreviewHover = (
-    uci: string,
-    brush: 'green' | 'blue' | 'yellow' = 'green',
-  ) => {
-    if (!isUciHighlighted(uci)) {
-      highlightUciOnBoard(uci, brush, false);
-    }
-  };
-
-  const handlePreviewLeave = (uci: string) => {
-    if (!isUciHighlighted(uci)) {
-      setCustomHighlightShapes([]);
-    }
-  };
-
   // 1) En modo sin ayuda DURANTE la partida:
   if (mode === 'no_aid' && !gameOver && !activeOpeningTrainer) {
     return (
@@ -677,8 +662,6 @@ export const CoachPanel: React.FC = () => {
                 <button
                   type="button"
                   className={`btn ${isUciHighlighted(liveTopUci) ? 'btn--accent' : 'btn--primary'} btn--xs`}
-                  onMouseEnter={() => handlePreviewHover(liveTopUci, 'green')}
-                  onMouseLeave={() => handlePreviewLeave(liveTopUci)}
                   onClick={() => toggleHighlightUciOnBoard(liveTopUci, 'green')}
                   title={
                     isUciHighlighted(liveTopUci)
@@ -777,8 +760,6 @@ export const CoachPanel: React.FC = () => {
                 <button
                   type="button"
                   className={`btn ${isUciHighlighted(activeEval.playedUci) ? 'btn--accent' : 'btn--ghost'} btn--xs`}
-                  onMouseEnter={() => handlePreviewHover(activeEval.playedUci, 'blue')}
-                  onMouseLeave={() => handlePreviewLeave(activeEval.playedUci)}
                   onClick={() => toggleHighlightUciOnBoard(activeEval.playedUci, 'blue')}
                   title={
                     isUciHighlighted(activeEval.playedUci)
@@ -823,8 +804,6 @@ export const CoachPanel: React.FC = () => {
                   <button
                     type="button"
                     className={`btn ${isUciHighlighted(activeEval.bestUci) ? 'btn--accent' : 'btn--primary'} btn--xs`}
-                    onMouseEnter={() => handlePreviewHover(activeEval.bestUci, 'green')}
-                    onMouseLeave={() => handlePreviewLeave(activeEval.bestUci)}
                     onClick={() => toggleHighlightUciOnBoard(activeEval.bestUci, 'green')}
                     title={
                       isUciHighlighted(activeEval.bestUci)

@@ -706,7 +706,19 @@ export const useChessStore = create<ChessStoreState>((set, get) => ({
     });
   },
 
-  toggleVisualOption: (opt) => set((s) => ({ [opt]: !s[opt] })),
+  toggleVisualOption: (opt) =>
+    set((s) => {
+      const nextVal = !s[opt];
+      if (opt === 'showVisualAids') {
+        return {
+          showVisualAids: nextVal,
+          showBestMoveArrow: nextVal,
+          showThreatArrows: nextVal,
+          customHighlightShapes: nextVal ? s.customHighlightShapes : [],
+        };
+      }
+      return { [opt]: nextVal };
+    }),
 
   toggleSimpleLanguageMode: () => set((s) => ({ simpleLanguageMode: !s.simpleLanguageMode })),
 
@@ -2519,39 +2531,52 @@ async function requestOptionalLlmExplanation(ev: MoveEvaluation) {
   }
 }
 
+/** Deduplica formas para evitar solapamientos redundantes en el lienzo de Chessground. */
+function dedupeBoardShapes(shapes: DrawShape[]): DrawShape[] {
+  const seen = new Set<string>();
+  return shapes.filter((s) => {
+    const key = `${s.orig}-${s.dest ?? ''}-${s.brush ?? ''}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /** Calcula las formas (flechas y casillas) que deben mostrarse en el tablero actualmente. */
 export function selectActiveBoardShapes(state: ChessStoreState): DrawShape[] {
-  const custom = state.customHighlightShapes ?? [];
   // En modo sin ayuda solo se ocultan las ayudas DURANTE la partida; al terminar (gameOver) se desbloquean todas.
   if (state.mode === 'no_aid' && !state.gameOver) return [];
-  if (!state.showVisualAids) return custom;
+  // Si las flechas guía están desactivadas, no mostrar ninguna flecha ni ayuda visual sobre el tablero
+  if (!state.showVisualAids) return [];
+
+  const custom = state.customHighlightShapes ?? [];
 
   if (state.variant?.active) {
     const shapes: DrawShape[] = [...custom];
     const topPv = state.variant.analysis?.lines[0]?.pv[0];
-    if (topPv && state.showBestMoveArrow) {
+    if (topPv && state.showBestMoveArrow !== false) {
       const p = parseUci(topPv);
       shapes.push({ orig: p.from, dest: p.to, brush: 'green' });
     }
-    return shapes;
+    return dedupeBoardShapes(shapes);
   }
 
   if ((state.mode === 'challenge' || state.mode === 'find_best') && state.activeChallenge) {
     if (state.activeChallenge.status === 'solved') {
       const p = parseUci(state.activeChallenge.puzzle.solutionUci[0]);
-      return [...custom, { orig: p.from, dest: p.to, brush: 'green' }];
+      return dedupeBoardShapes([...custom, { orig: p.from, dest: p.to, brush: 'green' }]);
     }
-    return custom;
+    return dedupeBoardShapes(custom);
   }
 
   const ev = state.moveEvaluations[state.viewingPly];
   if (ev) {
     const base = ev.shapes.filter((sh) => {
-      if (sh.brush === 'green' && !state.showBestMoveArrow) return false;
-      if (sh.brush === 'red' && !state.showThreatArrows) return false;
+      if (sh.brush === 'green' && state.showBestMoveArrow === false) return false;
+      if (sh.brush === 'red' && state.showThreatArrows === false) return false;
       return true;
     });
-    return [...base, ...custom];
+    return dedupeBoardShapes([...base, ...custom]);
   }
 
   // Si estamos en la posición en vivo y es el turno del jugador (sea Blancas o Negras):
@@ -2560,7 +2585,7 @@ export function selectActiveBoardShapes(state: ChessStoreState): DrawShape[] {
     !state.gameOver &&
     state.moves &&
     state.viewingPly === state.moves.length &&
-    state.showBestMoveArrow &&
+    state.showBestMoveArrow !== false &&
     state.fens
   ) {
     const currentFen = state.fens[state.viewingPly] ?? state.fens[state.fens.length - 1];
@@ -2572,12 +2597,12 @@ export function selectActiveBoardShapes(state: ChessStoreState): DrawShape[] {
           state.posAnalysisByPly?.[state.viewingPly]?.lines[0]?.pv[0];
         if (topPv) {
           const p = parseUci(topPv);
-          return [...custom, { orig: p.from, dest: p.to, brush: 'green' }];
+          return dedupeBoardShapes([...custom, { orig: p.from, dest: p.to, brush: 'green' }]);
         }
       }
     }
   }
 
-  return custom;
+  return dedupeBoardShapes(custom);
 }
 

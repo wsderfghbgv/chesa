@@ -427,5 +427,30 @@ describe('App component render test', () => {
     const longHtml = renderToString(<TruncatedExplanation text={longText} maxLen={40} />);
     expect(longHtml).toContain('Ver más');
   });
+
+  it('toggleVisualOption("showVisualAids") activa y desactiva las flechas de guía inmediatamente y limpia formas', () => {
+    useChessStore.setState({
+      showVisualAids: true,
+      showBestMoveArrow: true,
+      showThreatArrows: true,
+      customHighlightShapes: [{ orig: 'e2', dest: 'e4', brush: 'green' }],
+    });
+
+    // Al desactivar flechas guía:
+    useChessStore.getState().toggleVisualOption('showVisualAids');
+    const stateOff = useChessStore.getState();
+    expect(stateOff.showVisualAids).toBe(false);
+    expect(stateOff.showBestMoveArrow).toBe(false);
+    expect(stateOff.showThreatArrows).toBe(false);
+    expect(stateOff.customHighlightShapes).toEqual([]);
+    expect(selectActiveBoardShapes(stateOff)).toEqual([]);
+
+    // Al reactivar flechas guía:
+    useChessStore.getState().toggleVisualOption('showVisualAids');
+    const stateOn = useChessStore.getState();
+    expect(stateOn.showVisualAids).toBe(true);
+    expect(stateOn.showBestMoveArrow).toBe(true);
+    expect(stateOn.showThreatArrows).toBe(true);
+  });
 });
 
