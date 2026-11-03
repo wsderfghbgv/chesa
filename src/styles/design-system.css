@@ -634,6 +634,32 @@ input[type='number']:focus {
   animation: dsDotPulse 2s ease-out infinite;
 }
 
+.tab-count-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--bg-elevated);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tab-btn--active .tab-count-badge {
+  background-color: rgba(255, 255, 255, 0.28);
+  color: #04130d;
+  border-color: rgba(0, 0, 0, 0.15);
+}
+
+[data-theme='light'] .tab-btn--active .tab-count-badge {
+  color: #ffffff;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
 /* Transición entre secciones */
 .tab-content-area {
   animation: dsPanelEnter 380ms var(--ease-out-expo) both;

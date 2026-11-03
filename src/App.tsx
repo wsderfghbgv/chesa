@@ -266,28 +266,25 @@ export const App: React.FC = () => {
       <Toaster />
       {/* Cabecera Superior Unificada y Limpia */}
       <header className={`top-header ${isScrolled ? 'top-header--scrolled' : ''}`}>
-        <div className="brand-block">
+        <div className="brand-block" title={`Modo actual: ${GAME_MODE_LABELS[mode].title} — ${GAME_MODE_LABELS[mode].subtitle}`}>
           <div className="brand-logo" aria-hidden="true">♞</div>
-          <div>
-            <div className="brand-title-row">
-              <h1 className="brand-title">Chess Coach AI</h1>
-              <div
-                className={`engine-badge engine-badge--${engineStatus}`}
-                title={engineError ?? engineLabel}
-              >
-                <span className="engine-badge__dot" />
-                <span>
-                  {engineStatus === 'loading'
-                    ? 'Cargando…'
-                    : engineStatus === 'thinking' || isAnalyzingMove || isOpponentThinking
-                      ? 'Calculando…'
-                      : engineStatus === 'error'
-                        ? 'Error motor'
-                        : 'Stockfish 19'}
-                </span>
-              </div>
+          <div className="brand-title-row">
+            <h1 className="brand-title">Chess Coach AI</h1>
+            <div
+              className={`engine-badge engine-badge--${engineStatus}`}
+              title={engineError ?? engineLabel}
+            >
+              <span className="engine-badge__dot" />
+              <span>
+                {engineStatus === 'loading'
+                  ? 'Cargando…'
+                  : engineStatus === 'thinking' || isAnalyzingMove || isOpponentThinking
+                    ? 'Calculando…'
+                    : engineStatus === 'error'
+                      ? 'Error motor'
+                      : 'Stockfish 19'}
+              </span>
             </div>
-            <span className="brand-subtitle">{GAME_MODE_LABELS[mode].subtitle}</span>
           </div>
         </div>
 
@@ -562,15 +559,19 @@ export const App: React.FC = () => {
                 onClick={() => handleSelectTab('profile')}
               >
                 <span className="tab-btn__icon">👤</span>
-                <span className="tab-btn__label">Perfil ({playerStats.totalGames})</span>
+                <span className="tab-btn__label">Perfil</span>
+                {playerStats.totalGames > 0 && (
+                  <span className="tab-count-badge">{playerStats.totalGames}</span>
+                )}
               </button>
               <button
                 type="button"
                 className={`tab-btn ${activeTab === 'settings' ? 'tab-btn--active' : ''}`}
                 onClick={() => handleSelectTab('settings')}
+                title="Configuración de Modos de Juego y Bots Rivales"
               >
                 <span className="tab-btn__icon">🎚</span>
-                <span className="tab-btn__label">Modos y Niveles</span>
+                <span className="tab-btn__label">Modos y Bots</span>
               </button>
             </nav>
 
