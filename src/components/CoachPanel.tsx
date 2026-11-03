@@ -5,7 +5,6 @@ import { formatScore, describeScore } from '../engine/score';
 import { parseUci, uciToSan } from '../chess/utils';
 import { describeMoveNaturally, humanizeChessText } from '../chess/humanLanguage';
 import { MOTIF_LABELS, type ExplanationLevel } from '../coach/explain';
-import { isSpeechSupported } from '../coach/soundAndSpeech';
 import { EasyExplanation } from './EasyExplanation';
 import { CoachAvatarWidget } from './CoachAvatarWidget';
 
@@ -31,7 +30,6 @@ export const CoachPanel: React.FC = () => {
   const activeThinkingCheck = useChessStore((s) => s.activeThinkingCheck);
   const thinkingCheckEnabled = useChessStore((s) => s.thinkingCheckEnabled);
   const soundEnabled = useChessStore((s) => s.soundEnabled);
-  const voiceEnabled = useChessStore((s) => s.voiceEnabled);
   const explanationLevel = useChessStore((s) => s.explanationLevel);
   const showVisualAids = useChessStore((s) => s.showVisualAids);
   const simpleLanguageMode = useChessStore((s) => s.simpleLanguageMode);
@@ -44,11 +42,8 @@ export const CoachPanel: React.FC = () => {
   const customHighlightShapes = useChessStore((s) => s.customHighlightShapes);
   const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
   const toggleSound = useChessStore((s) => s.toggleSound);
-  const toggleVoice = useChessStore((s) => s.toggleVoice);
   const toggleThinkingCheck = useChessStore((s) => s.toggleThinkingCheck);
   const answerThinkingCheck = useChessStore((s) => s.answerThinkingCheck);
-  const speakText = useChessStore((s) => s.speakText);
-  const stopSpeech = useChessStore((s) => s.stopSpeech);
   const finishAndReviewNow = useChessStore((s) => s.finishAndReviewNow);
   const startOpeningDrill = useChessStore((s) => s.startOpeningDrill);
   const exitOpeningDrill = useChessStore((s) => s.exitOpeningDrill);
@@ -513,16 +508,6 @@ export const CoachPanel: React.FC = () => {
         >
           🔊 Sonidos
         </button>
-        {isSpeechSupported() && (
-          <button
-            type="button"
-            className={`opt-pill ${voiceEnabled ? 'opt-pill--active' : ''}`}
-            onClick={toggleVoice}
-            title="Leer recomendaciones en voz alta automáticamente"
-          >
-            🗣 Voz auto
-          </button>
-        )}
       </div>
 
       {/* Profesor Virtual con Voz: Avatar Animado, Subtítulos y Q&A */}
@@ -702,8 +687,8 @@ export const CoachPanel: React.FC = () => {
                   }
                 >
                   {isUciHighlighted(liveTopUci)
-                    ? '✕ Ocultar señalización de jugada'
-                    : `🟢 Señalar mi jugada de las ${playerColor === 'w' ? 'Blancas' : 'Negras'} en el tablero`}
+                    ? '✕ Quitar señalización'
+                    : '🟢 Señalar recomendación en tablero'}
                 </button>
                 <button
                   type="button"
@@ -765,32 +750,6 @@ export const CoachPanel: React.FC = () => {
                   Eval (tus {playerName}): <strong>{formatScore(activeEval.scoreBefore, playerColor)} → {formatScore(activeEval.scoreAfter, playerColor)}</strong>
                 </span>
               </div>
-
-              {isSpeechSupported() && (
-                <div className="btn-row">
-                  <button
-                    type="button"
-                    className="btn btn--ghost btn--xs"
-                    onClick={() =>
-                      speakText(
-                        humanizeChessText(
-                          `${humanPlayed ? humanPlayed.naturalSummary : activeEval.playedSanEs}, clasificada como ${activeEval.classification.meta.label}. Recomendación para tus ${playerName}: ${activeEval.recommendation}. Lo que hiciste bien: ${activeEval.whatYouDidWell}`,
-                        ),
-                      )
-                    }
-                  >
-                    🔊 Escuchar
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn--ghost btn--xs"
-                    onClick={stopSpeech}
-                    title="Detener voz"
-                  >
-                    ⏹
-                  </button>
-                </div>
-              )}
             </div>
 
             <div className="coach-comparison-grid">
@@ -887,15 +846,6 @@ export const CoachPanel: React.FC = () => {
                       title="Ver en el tablero la mejor jugada que recomendaba el motor sin alterar la partida"
                     >
                       👁 Ver mejor jugada
-                    </button>
-                  )}
-                  {activeEval.bestLine && (
-                    <button
-                      type="button"
-                      className="btn btn--secondary btn--xs"
-                      onClick={() => void startVariantFromEval(activeEval, 'best_alternative')}
-                    >
-                      ▶ Demostración
                     </button>
                   )}
                   {activeEval.classification.meta.isMistake && isUserMove && (

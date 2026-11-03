@@ -15,8 +15,6 @@ export const BoardQuickControls: React.FC = () => {
   const playerColor = useChessStore((s) => s.playerColor);
   const gameOver = useChessStore((s) => s.gameOver);
   const variant = useChessStore((s) => s.variant);
-  const focusBoardMode = useChessStore((s) => s.focusBoardMode);
-  const boardTheme = useChessStore((s) => s.boardTheme);
   const isAutoPlaying = useChessStore((s) => s.isAutoPlaying);
 
   const selectPly = useChessStore((s) => s.selectPly);
@@ -28,21 +26,12 @@ export const BoardQuickControls: React.FC = () => {
   const finishAndReviewNow = useChessStore((s) => s.finishAndReviewNow);
   const setActiveTab = useChessStore((s) => s.setActiveTab);
   const flipBoard = useChessStore((s) => s.flipBoard);
-  const toggleFocusBoardMode = useChessStore((s) => s.toggleFocusBoardMode);
-  const cycleBoardTheme = useChessStore((s) => s.cycleBoardTheme);
   const toggleAutoPlay = useChessStore((s) => s.toggleAutoPlay);
   const customHighlightShapes = useChessStore((s) => s.customHighlightShapes);
   const setCustomHighlightShapes = useChessStore((s) => s.setCustomHighlightShapes);
-  const toggleMoveHighlightArrow = useChessStore((s) => s.toggleMoveHighlightArrow);
 
-  const currentViewedMove = viewingPly > 0 ? moves[viewingPly - 1] : null;
-
-  const boardThemeLabel: Record<'emerald' | 'wood' | 'midnight' | 'ocean', string> = {
-    emerald: 'Esmeralda',
-    wood: 'Madera',
-    midnight: 'Medianoche',
-    ocean: 'Océano',
-  };
+  const [confirmResign, setConfirmResign] = useState(false);
+  const [confirmRestart, setConfirmRestart] = useState(false);
 
   const isVariantActive = Boolean(variant?.active);
   const maxVariantIndex = variant ? variant.fens.length - 1 : 0;
@@ -153,61 +142,7 @@ export const BoardQuickControls: React.FC = () => {
             ✕ Quitar flechas
           </button>
         )}
-        {currentViewedMove && (
-          <button
-            type="button"
-            className="btn btn--ghost btn--xs"
-            onClick={() => {
-              const p = parseUci(currentViewedMove.uci);
-              toggleMoveHighlightArrow(p.from, p.to, 'blue');
-            }}
-            title={`Sombrear con flecha la jugada ${currentViewedMove.sanEs} en el tablero (o clic derecho en el tablero)`}
-          >
-            🏹 Sombrear jugada
-          </button>
-        )}
-        <span className="board-color-chip" title={`Color con el que estás jugando (${playerColor === 'w' ? 'Blancas' : 'Negras'})`}>
-          Tú: <strong>{playerColor === 'w' ? '♔ Blancas' : '♚ Negras'}</strong>
-        </span>
-        <button
-          type="button"
-          className="btn btn--primary btn--xs"
-          onClick={() => void startNewGame({ color: playerColor })}
-        >
-          ↻ Nueva
-        </button>
-        <button
-          type="button"
-          className="btn btn--secondary btn--xs"
-          onClick={() => void startNewGame({ color: playerColor === 'w' ? 'b' : 'w' })}
-          title="Cambiar de color y empezar nueva partida"
-        >
-          ⇄ {playerColor === 'w' ? 'Negras ♚' : 'Blancas ♔'}
-        </button>
-        <button
-          type="button"
-          className="btn btn--ghost btn--xs"
-          onClick={flipBoard}
-          title="Girar orientación del tablero"
-        >
-          ⇅ Girar
-        </button>
-        <button
-          type="button"
-          className={`btn ${focusBoardMode ? 'btn--primary' : 'btn--ghost'} btn--xs`}
-          onClick={toggleFocusBoardMode}
-          title={focusBoardMode ? 'Restaurar vista habitual del tablero' : 'Agrandar tablero para máxima visibilidad'}
-        >
-          {focusBoardMode ? '🗗 Normal' : '🗖 Grande'}
-        </button>
-        <button
-          type="button"
-          className="btn btn--ghost btn--xs"
-          onClick={cycleBoardTheme}
-          title={`Cambiar estilo visual de las casillas del tablero (Actual: ${boardThemeLabel[boardTheme]})`}
-        >
-          🎨 {boardThemeLabel[boardTheme]}
-        </button>
+
         <button
           type="button"
           className="btn btn--ghost btn--xs"
@@ -221,6 +156,53 @@ export const BoardQuickControls: React.FC = () => {
         >
           ↩ Deshacer
         </button>
+
+        <button
+          type="button"
+          className="btn btn--ghost btn--xs"
+          onClick={flipBoard}
+          title="Girar orientación del tablero"
+        >
+          ⇅ Girar
+        </button>
+
+        {confirmRestart ? (
+          <span className="btn-confirm-group" role="alert">
+            <span className="confirm-prompt">¿Reiniciar?</span>
+            <button
+              type="button"
+              className="btn btn--primary btn--xs"
+              onClick={() => {
+                setConfirmRestart(false);
+                void startNewGame({ color: playerColor });
+              }}
+            >
+              ✓ Sí
+            </button>
+            <button
+              type="button"
+              className="btn btn--ghost btn--xs"
+              onClick={() => setConfirmRestart(false)}
+            >
+              ✕ No
+            </button>
+          </span>
+        ) : (
+          <button
+            type="button"
+            className="btn btn--primary btn--xs"
+            onClick={() => {
+              if (!gameOver && moves.length > 2) {
+                setConfirmRestart(true);
+              } else {
+                void startNewGame({ color: playerColor });
+              }
+            }}
+            title="Comenzar una nueva partida"
+          >
+            ↻ Nueva
+          </button>
+        )}
 
         {!gameOver && moves.length > 0 && mode !== 'challenge' && mode !== 'find_best' && (
           <>
@@ -238,18 +220,42 @@ export const BoardQuickControls: React.FC = () => {
               type="button"
               className="btn btn--ghost btn--xs"
               onClick={() => void offerDraw()}
-              title="Ofrecer tablas"
+              title="Ofrecer tablas al rival"
             >
               ½ Tablas
             </button>
-            <button
-              type="button"
-              className="btn btn--danger btn--xs"
-              onClick={() => void resignGame()}
-              title="Abandonar partida"
-            >
-              🏳 Rendirse
-            </button>
+
+            {confirmResign ? (
+              <span className="btn-confirm-group" role="alert">
+                <span className="confirm-prompt">¿Rendirse?</span>
+                <button
+                  type="button"
+                  className="btn btn--danger btn--xs"
+                  onClick={() => {
+                    setConfirmResign(false);
+                    void resignGame();
+                  }}
+                >
+                  ✓ Sí
+                </button>
+                <button
+                  type="button"
+                  className="btn btn--ghost btn--xs"
+                  onClick={() => setConfirmResign(false)}
+                >
+                  ✕ No
+                </button>
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="btn btn--danger btn--xs"
+                onClick={() => setConfirmResign(true)}
+                title="Abandonar partida"
+              >
+                🏳 Rendirse
+              </button>
+            )}
           </>
         )}
 
@@ -260,7 +266,7 @@ export const BoardQuickControls: React.FC = () => {
               className="btn btn--primary btn--xs"
               onClick={() => setActiveTab('report')}
             >
-              📊 Ver resumen
+              📊 Ver informe
             </button>
             <button
               type="button"
@@ -270,26 +276,6 @@ export const BoardQuickControls: React.FC = () => {
               ⚔ Revancha
             </button>
           </>
-        )}
-
-        {(mode !== 'no_aid' || gameOver) && (
-          <div className="board-mini-legend" aria-label="Colores de las flechas">
-            <span>
-              <i className="legend-dot legend-dot--green" /> Mejor
-            </span>
-            <span>
-              <i className="legend-dot legend-dot--blue" /> Jugada
-            </span>
-            <span>
-              <i className="legend-dot legend-dot--red" /> Peligro
-            </span>
-            <span
-              className="drawing-help-pill"
-              title="Clic derecho: dibuja flechas y sombrea casillas. Mayús: rojo, Alt: azul. Clic izquierdo en tablero: borrar."
-            >
-              🎨 Clic derecho dibuja flechas
-            </span>
-          </div>
         )}
       </div>
     </div>

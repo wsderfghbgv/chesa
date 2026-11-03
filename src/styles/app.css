@@ -1141,6 +1141,35 @@ cg-board square.checkmate-sq {
   align-items: center;
 }
 
+.btn-confirm-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  padding: 0.15rem 0.35rem;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px dashed rgba(239, 68, 68, 0.4);
+  animation: fadeInConfirm 0.15s ease-out;
+}
+
+.confirm-prompt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--danger, #ef4444);
+  margin-right: 0.1rem;
+}
+
+@keyframes fadeInConfirm {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .pill {
   display: inline-flex;
   align-items: center;

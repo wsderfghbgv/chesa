@@ -27,6 +27,7 @@ export const ProfilePanel: React.FC = () => {
   const [onlineCount, setOnlineCount] = useState(2);
   const [onlineLoading, setOnlineLoading] = useState(false);
   const [autoAnalyzeOnImport, setAutoAnalyzeOnImport] = useState(true);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const triggerDownload = (filename: string, content: string, mime = 'text/plain;charset=utf-8') => {
     const blob = new Blob([content], { type: mime });
@@ -386,13 +387,40 @@ export const ProfilePanel: React.FC = () => {
                     >
                       Revancha
                     </button>
-                    <button
-                      type="button"
-                      className="btn btn--danger btn--xs"
-                      onClick={() => void removeSavedGame(g.id)}
-                    >
-                      Eliminar
-                    </button>
+                    {confirmDeleteId === g.id ? (
+                      <span className="btn-confirm-group" role="group" aria-label="Confirmar eliminación">
+                        <span className="confirm-prompt">¿Eliminar?</span>
+                        <button
+                          type="button"
+                          className="btn btn--danger btn--xs"
+                          onClick={() => {
+                            void removeSavedGame(g.id);
+                            setConfirmDeleteId(null);
+                          }}
+                          aria-label="Confirmar eliminar partida guardada"
+                        >
+                          ✓ Sí
+                        </button>
+                        <button
+                          type="button"
+                          className="btn btn--ghost btn--xs"
+                          onClick={() => setConfirmDeleteId(null)}
+                          aria-label="Cancelar eliminación"
+                        >
+                          ✕ No
+                        </button>
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        className="btn btn--danger btn--xs"
+                        onClick={() => setConfirmDeleteId(g.id)}
+                        aria-label="Eliminar partida guardada"
+                        title="Eliminar esta partida del historial guardado"
+                      >
+                        🗑 Eliminar
+                      </button>
+                    )}
                   </div>
                 </div>
               );

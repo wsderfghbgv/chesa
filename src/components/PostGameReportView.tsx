@@ -125,6 +125,7 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
   const loadChallengePuzzle = useChessStore((s) => s.loadChallengePuzzle);
   const loadVerificationChallengeFromReport = useChessStore((s) => s.loadVerificationChallengeFromReport);
   const startPracticeMistakesFromCurrentGame = useChessStore((s) => s.startPracticeMistakesFromCurrentGame);
+  const practicePersonalMistake = useChessStore((s) => s.practicePersonalMistake);
   const analyzeCurrentGameFull = useChessStore((s) => s.analyzeCurrentGameFull);
   const cancelBatchAnalysis = useChessStore((s) => s.cancelBatchAnalysis);
   const batchAnalysisProgress = useChessStore((s) => s.batchAnalysisProgress);
@@ -195,6 +196,32 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
     setActiveTab('coach');
   };
 
+  const handlePracticeSpecificMistake = (ev: MoveEvaluation) => {
+    void practicePersonalMistake({
+      id: `mistake-${ev.ply}`,
+      gameId: 'current',
+      createdAt: new Date().toISOString(),
+      ply: ev.ply,
+      moveNumber: ev.moveNumber,
+      playerColor: ev.mover,
+      playedUci: ev.playedUci,
+      playedSanEs: ev.playedSanEs,
+      bestSanEs: ev.bestSanEs,
+      bestUci: ev.bestUci,
+      fenBefore: ev.fenBefore,
+      cpLoss: ev.cpLoss,
+      categoryLabel: ev.classification.meta.label,
+      categoryColor: ev.classification.meta.color,
+      motifs: ev.motifs,
+      whatHappened: ev.whatHappened,
+      bestAlternativeExplain: ev.bestAlternativeExplain,
+      recommendation: ev.recommendation,
+      mastered: false,
+      solvedCount: 0,
+      attemptsCount: 0,
+    });
+  };
+
   // Al pulsar un chip de error: saltar en tablero, expandir tarjeta y hacer scroll suave
   const handleSelectMistakeChip = (m: MoveEvaluation) => {
     void selectPly(m.ply);
@@ -262,6 +289,12 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
             type="button"
             className="btn btn--accent btn--xs"
             onClick={handleStartMistakePractice}
+            disabled={keyMistakes.length === 0}
+            title={
+              keyMistakes.length === 0
+                ? 'No se detectaron errores del jugador en esta partida'
+                : `Practicar ${keyMistakes.length} errores de la partida en el tablero interactivo`
+            }
           >
             🎯 Practicar mis errores
           </button>
@@ -418,7 +451,11 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
               <button
                 type="button"
                 className="btn btn--accent btn--xs"
-                onClick={handleStartMistakePractice}
+                onClick={() =>
+                  handlePracticeSpecificMistake(
+                    report.mainMistake ?? report.criticalMoment!,
+                  )
+                }
               >
                 🎯 Practicar este error
               </button>
@@ -477,7 +514,11 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
               <button
                 type="button"
                 className="btn btn--accent btn--xs"
-                onClick={handleStartMistakePractice}
+                onClick={() =>
+                  handlePracticeSpecificMistake(
+                    report.mainMistake ?? report.criticalMoment!,
+                  )
+                }
               >
                 🎯 Practicar este error
               </button>
@@ -834,26 +875,28 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
       </div>
 
       {/* 5. Barra inferior sticky del panel con el botón principal de práctica */}
-      <div className="report-sticky-bottom-bar" role="region" aria-label="Práctica interactiva de errores">
-        <div className="report-sticky-bottom-bar__info">
-          <span className="report-sticky-bottom-bar__icon" aria-hidden="true">🎯</span>
-          <div className="report-sticky-bottom-bar__text">
-            <strong>Practica tus fallos en el tablero</strong>
-            <small>
-              {report.criticalMistakes.length > 0
-                ? `${report.criticalMistakes.length} ejercicios tácticos basados en esta partida`
-                : 'Resuelve las posiciones dudosas calculadas por Stockfish'}
-            </small>
+      {keyMistakes.length > 0 && (
+        <div className="report-sticky-bottom-bar" role="region" aria-label="Práctica interactiva de errores">
+          <div className="report-sticky-bottom-bar__info">
+            <span className="report-sticky-bottom-bar__icon" aria-hidden="true">🎯</span>
+            <div className="report-sticky-bottom-bar__text">
+              <strong>Practica tus fallos en el tablero</strong>
+              <small>
+                {report.criticalMistakes.length > 0
+                  ? `${report.criticalMistakes.length} ejercicios tácticos basados en esta partida`
+                  : `${keyMistakes.length} jugadas mejorables detectadas por Stockfish`}
+              </small>
+            </div>
           </div>
+          <button
+            type="button"
+            className="btn btn--accent btn--sm report-sticky-bottom-bar__btn"
+            onClick={handleStartMistakePractice}
+          >
+            🎯 Comenzar práctica →
+          </button>
         </div>
-        <button
-          type="button"
-          className="btn btn--accent btn--sm report-sticky-bottom-bar__btn"
-          onClick={handleStartMistakePractice}
-        >
-          🎯 Comenzar práctica →
-        </button>
-      </div>
+      )}
     </section>
   );
 };
