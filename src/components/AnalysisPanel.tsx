@@ -74,6 +74,13 @@ export const AnalysisPanel: React.FC = () => {
         analysis: liveLines,
       },
     });
+
+    if (typeof window !== 'undefined') {
+      const boardEl = document.querySelector('.board-stage') || document.querySelector('.board-column');
+      if (boardEl) {
+        boardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
   };
 
   const handleCopyFen = async () => {
