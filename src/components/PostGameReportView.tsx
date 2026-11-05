@@ -189,8 +189,8 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
     return Array.from(map.values()).sort((a, b) => a.ply - b.ply);
   }, [report.criticalMoment, report.mainMistake, report.criticalMistakes]);
 
-  // Al pulsar "Ver en tablero": saltar a la jugada, iluminar flechas en el tablero, cambiar al Profesor y enfocar el tablero
-  const handleJumpToMove = (ply: number, evalItem?: MoveEvaluation) => {
+  // Al pulsar "Ver en tablero": saltar a la jugada, iluminar casillas y flechas en el tablero y enfocar
+  const handleJumpToMove = async (ply: number, evalItem?: MoveEvaluation) => {
     const ev =
       evalItem ??
       (report.criticalMoment?.ply === ply ? report.criticalMoment : null) ??
@@ -207,7 +207,8 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
       }));
     }
 
-    void selectPly(ply);
+    useChessStore.setState({ showVisualAids: true });
+    await selectPly(ply);
 
     if (ev) {
       try {
@@ -215,10 +216,12 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
         const pBest = parseUci(ev.bestUci);
         const shapes: DrawShape[] = [
           { orig: pPlayed.from, dest: pPlayed.to, brush: 'blue' },
-          { orig: pPlayed.to, brush: 'yellow' },
+          { orig: pPlayed.from, brush: 'yellow' },
+          { orig: pPlayed.to, brush: 'blue' },
         ];
         if (ev.bestUci !== ev.playedUci) {
           shapes.push({ orig: pBest.from, dest: pBest.to, brush: 'green' });
+          shapes.push({ orig: pBest.to, brush: 'green' });
         }
         setCustomHighlightShapes(shapes);
       } catch {
@@ -226,13 +229,14 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
       }
     }
 
-    setActiveTab('coach');
-
     if (typeof window !== 'undefined') {
       window.requestAnimationFrame(() => {
         const boardEl = document.querySelector('.board-stage') || document.querySelector('.board-column');
         if (boardEl) {
-          boardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const rect = boardEl.getBoundingClientRect();
+          if (rect.top < 0 || rect.bottom > window.innerHeight) {
+            boardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
         }
       });
     }
@@ -269,19 +273,22 @@ export const PostGameReportView: React.FC<PostGameReportViewProps> = ({
     });
   };
 
-  // Al pulsar un chip de error: saltar en tablero, iluminar flechas, expandir tarjeta y hacer scroll suave
-  const handleSelectMistakeChip = (m: MoveEvaluation) => {
-    void selectPly(m.ply);
+  // Al pulsar un chip de error: saltar en tablero, iluminar casillas y flechas, expandir tarjeta y enfocar
+  const handleSelectMistakeChip = async (m: MoveEvaluation) => {
+    useChessStore.setState({ showVisualAids: true });
+    await selectPly(m.ply);
 
     try {
       const pPlayed = parseUci(m.playedUci);
       const pBest = parseUci(m.bestUci);
       const shapes: DrawShape[] = [
         { orig: pPlayed.from, dest: pPlayed.to, brush: 'blue' },
-        { orig: pPlayed.to, brush: 'yellow' },
+        { orig: pPlayed.from, brush: 'yellow' },
+        { orig: pPlayed.to, brush: 'blue' },
       ];
       if (m.bestUci !== m.playedUci) {
         shapes.push({ orig: pBest.from, dest: pBest.to, brush: 'green' });
+        shapes.push({ orig: pBest.to, brush: 'green' });
       }
       setCustomHighlightShapes(shapes);
     } catch {

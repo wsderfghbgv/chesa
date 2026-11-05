@@ -452,5 +452,39 @@ describe('App component render test', () => {
     expect(stateOn.showBestMoveArrow).toBe(true);
     expect(stateOn.showThreatArrows).toBe(true);
   });
+
+  it('selectActiveBoardShapes muestra flecha direccional al consultar jugadas del historial y respeta customHighlightShapes', () => {
+    const fenAfterE4 = 'rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1';
+    const fenAfterE5 = 'rnbqkbnr/pppp1ppp/8/4p3/4P3/8/PPPP1PPP/RNBQKBNR w KQkq e6 0 2';
+    const state = {
+      ...useChessStore.getState(),
+      showVisualAids: true,
+      mode: 'normal' as const,
+      gameOver: false,
+      moves: [
+        { ply: 1, moveNumber: 1, color: 'w' as const, uci: 'e2e4', san: 'e4', sanEs: 'e4', fenBefore: START_FEN, fenAfter: fenAfterE4 },
+        { ply: 2, moveNumber: 1, color: 'b' as const, uci: 'e7e5', san: 'e5', sanEs: 'e5', fenBefore: fenAfterE4, fenAfter: fenAfterE5 },
+      ],
+      fens: [START_FEN, fenAfterE4, fenAfterE5],
+      viewingPly: 1,
+      moveEvaluations: {},
+      customHighlightShapes: [],
+    };
+
+    // Al consultar la jugada 1 del historial (e2 -> e4)
+    const shapes = selectActiveBoardShapes(state as any);
+    expect(shapes.length).toBe(1);
+    expect(shapes[0].orig).toBe('e2');
+    expect(shapes[0].dest).toBe('e4');
+    expect(shapes[0].brush).toBe('blue');
+
+    // Con custom shapes (ej. señaladas por el usuario o por Ver en tablero)
+    const stateWithCustom = {
+      ...state,
+      customHighlightShapes: [{ orig: 'd2', dest: 'd4', brush: 'green' as const }],
+    };
+    const shapesCustom = selectActiveBoardShapes(stateWithCustom as any);
+    expect(shapesCustom.some((s) => s.orig === 'd2' && s.dest === 'd4')).toBe(true);
+  });
 });
 

@@ -32,6 +32,7 @@ export const EasyExplanation: React.FC<EasyExplanationProps> = ({ text }) => {
       setCustomHighlightShapes([]);
     } else {
       setSelectedSq(sq);
+      useChessStore.setState({ showVisualAids: true });
       setCustomHighlightShapes([{ orig: sq, brush: 'yellow' }]);
       if (typeof window !== 'undefined') {
         const boardEl = document.querySelector('.board-stage') || document.querySelector('.board-column');

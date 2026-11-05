@@ -185,12 +185,21 @@ export const InteractiveBoard: React.FC<InteractiveBoardProps> = ({
         : (playerColor === 'w' ? 'white' : 'black');
 
     const customClasses: SquareClasses = new Map();
+    const addCustomClass = (sq: Key, cls: string) => {
+      const existing = customClasses.get(sq);
+      customClasses.set(sq, existing ? `${existing} ${cls}` : cls);
+    };
+
     for (const sq of vulnerableSquares) {
-      customClasses.set(sq as Key, 'vulnerable-sq');
+      addCustomClass(sq as Key, 'vulnerable-sq');
     }
     if (chess.isCheckmate()) {
       const kSq = kingSquare(chess, stm);
-      if (kSq) customClasses.set(kSq as Key, 'checkmate-sq');
+      if (kSq) addCustomClass(kSq as Key, 'checkmate-sq');
+    }
+    if (lastMove && lastMove[0] && lastMove[1]) {
+      addCustomClass(lastMove[0] as Key, 'move-origin-sq');
+      addCustomClass(lastMove[1] as Key, 'move-dest-sq');
     }
 
     api.set({

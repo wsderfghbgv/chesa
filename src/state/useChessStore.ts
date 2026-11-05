@@ -2546,10 +2546,11 @@ function dedupeBoardShapes(shapes: DrawShape[]): DrawShape[] {
 export function selectActiveBoardShapes(state: ChessStoreState): DrawShape[] {
   // En modo sin ayuda solo se ocultan las ayudas DURANTE la partida; al terminar (gameOver) se desbloquean todas.
   if (state.mode === 'no_aid' && !state.gameOver) return [];
-  // Si las flechas guía están desactivadas, no mostrar ninguna flecha ni ayuda visual sobre el tablero
-  if (!state.showVisualAids) return [];
 
   const custom = state.customHighlightShapes ?? [];
+  // Si las flechas guía automáticas están desactivadas, no mostrar flechas automáticas del motor/evaluación,
+  // pero SÍ respetar las formas explícitamente solicitadas o señaladas por el usuario (customHighlightShapes)
+  if (!state.showVisualAids) return custom;
 
   if (state.variant?.active) {
     const shapes: DrawShape[] = [...custom];
@@ -2577,6 +2578,18 @@ export function selectActiveBoardShapes(state: ChessStoreState): DrawShape[] {
       return true;
     });
     return dedupeBoardShapes([...base, ...custom]);
+  }
+
+  // Si se está consultando una jugada pasada del historial que aún no tiene evaluación completa:
+  if (state.viewingPly > 0 && state.moves && state.viewingPly < state.moves.length) {
+    const mv = state.moves[state.viewingPly - 1];
+    if (mv) {
+      const p = parseUci(mv.uci);
+      return dedupeBoardShapes([
+        { orig: p.from, dest: p.to, brush: 'blue' },
+        ...custom,
+      ]);
+    }
   }
 
   // Si estamos en la posición en vivo y es el turno del jugador (sea Blancas o Negras):

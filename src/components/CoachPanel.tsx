@@ -72,6 +72,7 @@ export const CoachPanel: React.FC = () => {
     doScroll = true,
   ) => {
     const p = parseUci(uci);
+    useChessStore.setState({ showVisualAids: true });
     setCustomHighlightShapes([
       { orig: p.from, dest: p.to, brush },
       { orig: p.from, brush: 'yellow' },
