@@ -19,7 +19,14 @@ REGLAS ESTRICTAS:
 2. Cita únicamente la mejor jugada y la variante principal proporcionadas por Stockfish en el JSON.
 3. Adapta el tono al nivel indicado ("basico", "intermedio" o "avanzado") en 3 a 5 frases claras y didácticas.`;
 
+const responseCache = new Map();
+const MAX_SERVER_CACHE = 250;
+
 async function callLlm(payload) {
+  const cacheKey = JSON.stringify(payload);
+  if (responseCache.has(cacheKey)) {
+    return responseCache.get(cacheKey);
+  }
   const openaiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
@@ -45,7 +52,15 @@ async function callLlm(payload) {
     });
     if (!res.ok) throw new Error(`OpenAI HTTP ${res.status}`);
     const data = await res.json();
-    return data.choices?.[0]?.message?.content?.trim() ?? null;
+    const out = data.choices?.[0]?.message?.content?.trim() ?? null;
+    if (out) {
+      responseCache.set(cacheKey, out);
+      if (responseCache.size > MAX_SERVER_CACHE) {
+        const first = responseCache.keys().next().value;
+        if (first !== undefined) responseCache.delete(first);
+      }
+    }
+    return out;
   }
 
   if (geminiKey) {
@@ -63,7 +78,15 @@ async function callLlm(payload) {
     });
     if (!res.ok) throw new Error(`Gemini HTTP ${res.status}`);
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+    const out = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? null;
+    if (out) {
+      responseCache.set(cacheKey, out);
+      if (responseCache.size > MAX_SERVER_CACHE) {
+        const first = responseCache.keys().next().value;
+        if (first !== undefined) responseCache.delete(first);
+      }
+    }
+    return out;
   }
 
   return null;
@@ -101,7 +124,7 @@ const server = createServer(async (req, res) => {
     return;
   }
 
-  if (req.method === 'POST' && req.url === '/api/explain') {
+  if (req.method === 'POST' && (req.url === '/api/explain' || req.url === '/api/opening-coach')) {
     let body = '';
     req.on('data', (chunk) => {
       body += chunk;

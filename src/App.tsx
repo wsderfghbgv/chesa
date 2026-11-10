@@ -16,6 +16,7 @@ import {
   MoveHistoryAndControls,
 } from './components/MoveHistoryAndControls';
 import { CoachPanel } from './components/CoachPanel';
+import { OpeningsAcademyView } from './components/OpeningsAcademyView';
 import { TrainingLabPanel } from './components/TrainingLabPanel';
 import { AnalysisPanel } from './components/AnalysisPanel';
 import { PostGameReportView } from './components/PostGameReportView';
@@ -398,6 +399,15 @@ export const App: React.FC = () => {
 
           <button
             type="button"
+            className={`btn btn--xs ${activeTab === 'openings' ? 'btn--primary' : 'btn--ghost'}`}
+            onClick={() => handleSelectTab(activeTab === 'openings' ? 'coach' : 'openings')}
+            title="Abrir el sistema interactivo Aprender Aperturas (37 aperturas, Lecciones, Entrenador IA y Voz)"
+          >
+            {activeTab === 'openings' ? '♟ Volver a Partida' : '📖 Aprender Aperturas'}
+          </button>
+
+          <button
+            type="button"
             className="btn btn--ghost btn--xs theme-toggle-btn"
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
             aria-label="Cambiar entre tema oscuro y claro"
@@ -416,7 +426,77 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Área principal de 2 columnas bien diferenciadas */}
+      {/* Área principal: Si está activa la Academia de Aperturas, ocupa el espacio completo de 3 paneles; si no, las 2 columnas de partida */}
+      {activeTab === 'openings' ? (
+        <main className="main-workspace main-workspace--academy">
+          <div className="academy-workspace-nav">
+            <nav className="workspace-tabs" aria-label="Secciones del entrenador">
+              <button
+                type="button"
+                className="tab-btn"
+                onClick={() => handleSelectTab('coach')}
+              >
+                <span className="tab-btn__icon">🎓</span>
+                <span className="tab-btn__label">Profesor</span>
+              </button>
+              <button
+                type="button"
+                className="tab-btn tab-btn--active"
+                onClick={() => handleSelectTab('openings')}
+              >
+                <span className="tab-btn__icon">📖</span>
+                <span className="tab-btn__label">Aprender Aperturas</span>
+              </button>
+              <button
+                type="button"
+                className="tab-btn"
+                onClick={() => handleSelectTab('lab')}
+              >
+                <span className="tab-btn__icon">🧪</span>
+                <span className="tab-btn__label">Laboratorio</span>
+                {personalMistakes.some((m) => !m.mastered) && <span className="tab-dot" />}
+              </button>
+              <button
+                type="button"
+                className="tab-btn"
+                onClick={() => handleSelectTab('analysis')}
+              >
+                <span className="tab-btn__icon">⚙</span>
+                <span className="tab-btn__label">Motor</span>
+              </button>
+              <button
+                type="button"
+                className="tab-btn"
+                onClick={() => handleSelectTab('report')}
+              >
+                <span className="tab-btn__icon">📊</span>
+                <span className="tab-btn__label">Informe</span>
+                {postGameReport && <span className="tab-dot" />}
+              </button>
+              <button
+                type="button"
+                className="tab-btn"
+                onClick={() => handleSelectTab('profile')}
+              >
+                <span className="tab-btn__icon">👤</span>
+                <span className="tab-btn__label">Perfil</span>
+                {playerStats.totalGames > 0 && (
+                  <span className="tab-count-badge">{playerStats.totalGames}</span>
+                )}
+              </button>
+              <button
+                type="button"
+                className="tab-btn"
+                onClick={() => handleSelectTab('settings')}
+              >
+                <span className="tab-btn__icon">🎚</span>
+                <span className="tab-btn__label">Modos y Bots</span>
+              </button>
+            </nav>
+          </div>
+          <OpeningsAcademyView />
+        </main>
+      ) : (
       <main className={`main-workspace ${focusBoardMode ? 'main-workspace--focus-board' : ''}`}>
         {/* Columna izquierda: Exclusivamente Tablero + Jugadores + Barra de Acción Rápida */}
         <div className="board-column">
@@ -581,6 +661,14 @@ export const App: React.FC = () => {
               </button>
               <button
                 type="button"
+                className="tab-btn"
+                onClick={() => handleSelectTab('openings')}
+              >
+                <span className="tab-btn__icon">📖</span>
+                <span className="tab-btn__label">Aprender Aperturas</span>
+              </button>
+              <button
+                type="button"
                 className={`tab-btn ${activeTab === 'lab' ? 'tab-btn--active' : ''}`}
                 onClick={() => handleSelectTab('lab')}
               >
@@ -641,6 +729,7 @@ export const App: React.FC = () => {
           </div>
         </div>
       </main>
+      )}
     </div>
   );
 };

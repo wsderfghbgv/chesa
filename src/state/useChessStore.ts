@@ -144,7 +144,7 @@ export interface OpeningTrainerSession {
 export interface ChessStoreState {
   // Tema y vista principal
   theme: 'dark' | 'light';
-  activeTab: 'coach' | 'lab' | 'analysis' | 'report' | 'profile' | 'settings';
+  activeTab: 'coach' | 'openings' | 'lab' | 'analysis' | 'report' | 'profile' | 'settings';
 
   // Configuración del motor y del entrenador
   mode: GameMode;

@@ -28,6 +28,7 @@ export const TrainingLabPanel: React.FC = () => {
   const startOpeningDrill = useChessStore((s) => s.startOpeningDrill);
   const startEndgameDrill = useChessStore((s) => s.startEndgameDrill);
   const practicePersonalMistake = useChessStore((s) => s.practicePersonalMistake);
+  const setActiveTab = useChessStore((s) => s.setActiveTab);
 
   const dueOpeningsCount = OPENING_REPERTOIRE.filter((op) =>
     isOpeningDueForReview(openingSrMap[op.id]),
@@ -81,6 +82,25 @@ export const TrainingLabPanel: React.FC = () => {
       {/* 1. ENTRENADOR DE APERTURAS CON REPETICIÓN ESPACIADA */}
       {subTab === 'openings' && (
         <div className="lab-section">
+          <div className="academy-promo-banner">
+            <div>
+              <strong>📖 Nueva Academia Inteligente de Aperturas (37 Aperturas Completas)</strong>
+              <p className="muted-text" style={{ margin: '4px 0 0' }}>
+                Accede a la biblioteca enciclopédica por las 7 categorías, lecciones interactivas con
+                las 7 dimensiones de cada jugada, Profesor con Voz, Entrenador IA con Stockfish,
+                Explorador de Variantes, 8 tipos de Retos y Analizador de Fase de Apertura de tus
+                partidas.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="btn btn--primary btn--sm"
+              onClick={() => setActiveTab('openings')}
+            >
+              📖 Abrir Academia de Aperturas →
+            </button>
+          </div>
+
           <p className="muted-text">
             Practica las líneas fundamentales con Blancas y Negras sobre el tablero. El sistema de{' '}
             <strong>Repetición Espaciada (Leitner)</strong> programa automáticamente para repaso hoy

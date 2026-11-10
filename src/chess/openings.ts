@@ -201,6 +201,26 @@ const RAW_OPENINGS: OpeningEntry[] = [
     planBlack: 'Responder con e5 (Siciliana invertida), c5 (simétrica) o esquemas indios con Cf6.',
   },
   {
+    eco: 'A20', name: 'Apertura Inglesa: Siciliana Invertida (1...e5)', moves: ['c4', 'e5', 'Nc3', 'Nf6', 'Nf3', 'Nc6'],
+    planWhite: 'Presionar d5 con Cc3 y Ag2, preparando d3 o la ruptura d4 en condiciones favorables.',
+    planBlack: 'Disputar el centro con Ab4 o d5 creando juego activo de piezas.',
+  },
+  {
+    eco: 'E04', name: 'Apertura Catalana', moves: ['d4', 'Nf6', 'c4', 'e6', 'g3', 'd5', 'Bg2'],
+    planWhite: 'Ejercer presión duradera por la gran diagonal h1-a8 sobre el flanco de dama negro.',
+    planBlack: 'Capturar dxc4 y sostener el peón o desarrollar Ae7 y c6 cerrando la diagonal.',
+  },
+  {
+    eco: 'C51', name: 'Gambito Evans', moves: ['e4', 'e5', 'Nf3', 'Nc6', 'Bc4', 'Bc5', 'b4'],
+    planWhite: 'Sacrificar el peón de b4 para ganar tiempos con c3 y d4 y atacar el rey negro en el centro.',
+    planBlack: 'Aceptar en b4, retirar el alfil a a5 o e7 y devolver el peón con d5 para liberar sus piezas.',
+  },
+  {
+    eco: 'D20', name: 'Gambito de Dama Aceptado', moves: ['d4', 'd5', 'c4', 'dxc4'],
+    planWhite: 'Ocupar el centro con e4/e3 y recuperar fácilmente el peón de c4 con el alfil.',
+    planBlack: 'No aferrarse al peón de c4; desarrollar Cf6 y golpear el centro blanco con c5 y e6.',
+  },
+  {
     eco: 'A04', name: 'Apertura Réti', moves: ['Nf3', 'd5', 'c4'],
     planWhite: 'Presionar el centro a distancia con peones de flanco y alfiles en fianchetto.',
     planBlack: 'Sostener d5 con c6 o e6 o avanzar d4 si cuenta con buen apoyo de piezas.',
@@ -212,15 +232,32 @@ interface IndexedOpening extends OpeningEntry {
   fenKey: string;
 }
 
+export interface BookContinuation {
+  uci: string;
+  san: string;
+  eco: string;
+  openingName: string;
+}
+
 const BY_FEN = new Map<string, IndexedOpening>();
 const BY_PREFIX_FEN = new Map<string, OpeningEntry>();
+const CONTINUATIONS_BY_FEN = new Map<string, BookContinuation[]>();
 
 for (const op of RAW_OPENINGS) {
   const c = new Chess();
   let ok = true;
   for (const m of op.moves) {
     try {
-      c.move(m);
+      const beforeKey = fenKey(c.fen());
+      const mv = c.move(m);
+      if (mv) {
+        const uci = mv.from + mv.to + (mv.promotion ?? '');
+        const existing = CONTINUATIONS_BY_FEN.get(beforeKey) ?? [];
+        if (!existing.some((x) => x.uci === uci)) {
+          existing.push({ uci, san: mv.san, eco: op.eco, openingName: op.name });
+          CONTINUATIONS_BY_FEN.set(beforeKey, existing);
+        }
+      }
       if (!BY_PREFIX_FEN.has(fenKey(c.fen()))) {
         BY_PREFIX_FEN.set(fenKey(c.fen()), op);
       }
@@ -232,6 +269,13 @@ for (const op of RAW_OPENINGS) {
   if (ok) {
     BY_FEN.set(fenKey(c.fen()), { ...op, ply: op.moves.length, fenKey: fenKey(c.fen()) });
   }
+}
+
+/**
+ * Devuelve las jugadas teóricas conocidas desde una posición FEN dada.
+ */
+export function getBookContinuations(fen: string): BookContinuation[] {
+  return CONTINUATIONS_BY_FEN.get(fenKey(fen)) ?? [];
 }
 
 /**
