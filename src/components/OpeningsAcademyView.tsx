@@ -911,17 +911,28 @@ export const OpeningsAcademyView: React.FC = () => {
   const [academyBoardSize, setAcademyBoardSize] = useState<number | null>(null);
 
   useEffect(() => {
-    const el = centerStageRef.current;
-    if (!el || typeof ResizeObserver === 'undefined') return;
+    const stage = centerStageRef.current;
+    if (!stage || typeof ResizeObserver === 'undefined') return;
     const update = () => {
-      const rect = el.getBoundingClientRect();
-      const availW = Math.max(260, rect.width - 54);
-      const availH = Math.max(260, Math.min(window.innerHeight * 0.56, 520));
-      setAcademyBoardSize(Math.floor(Math.min(availW, availH)));
+      const rect = stage.getBoundingClientRect();
+      const stageW = rect.width;
+      const stageH = rect.height;
+      if (stageW <= 0) return;
+      const evalBarOffset = 32;
+      const isMobile = window.innerWidth <= 760;
+      const availW = Math.max(160, stageW - evalBarOffset);
+      const availH = isMobile
+        ? availW
+        : stageH > 100
+          ? Math.max(160, stageH)
+          : Math.max(160, Math.min(availW, window.innerHeight - 260));
+      const raw = Math.min(availW, availH);
+      const snapped = Math.max(180, Math.floor(raw / 8) * 8);
+      setAcademyBoardSize((prev) => (prev !== snapped ? snapped : prev));
     };
     update();
     const ro = new ResizeObserver(update);
-    ro.observe(el);
+    ro.observe(stage);
     window.addEventListener('resize', update);
     return () => {
       ro.disconnect();
@@ -936,7 +947,19 @@ export const OpeningsAcademyView: React.FC = () => {
         <div className="academy-top-bar__title">
           <span className="eyebrow">Academia de Aperturas · Stockfish 19 + Entrenador IA</span>
           <h2>
-            {opening.name} <span className="pill pill--motif">{opening.eco}</span>{' '}
+            <select
+              className="academy-quick-opening-select"
+              value={opening.id}
+              onChange={(e) => handleSelectOpening(e.target.value)}
+              aria-label="Seleccionar apertura de la academia"
+            >
+              {OPENING_DEFS.map((op) => (
+                <option key={op.id} value={op.id}>
+                  {op.name} ({op.eco})
+                </option>
+              ))}
+            </select>
+            <span className="pill pill--motif">{opening.eco}</span>{' '}
             <span className="pill pill--phase">{CATEGORY_LABELS[opening.category]}</span>{' '}
             <span className="pill pill--accent">
               Dominio: {currentMastery.percent}% ({currentMastery.label})

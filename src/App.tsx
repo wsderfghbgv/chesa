@@ -426,74 +426,9 @@ export const App: React.FC = () => {
         </div>
       </header>
 
-      {/* Área principal: Si está activa la Academia de Aperturas, ocupa el espacio completo de 3 paneles; si no, las 2 columnas de partida */}
+      {/* Área principal: Si está activa la Academia de Aperturas, ocupa el espacio completo */}
       {activeTab === 'openings' ? (
         <main className="main-workspace main-workspace--academy">
-          <div className="academy-workspace-nav">
-            <nav className="workspace-tabs" aria-label="Secciones del entrenador">
-              <button
-                type="button"
-                className="tab-btn"
-                onClick={() => handleSelectTab('coach')}
-              >
-                <span className="tab-btn__icon">🎓</span>
-                <span className="tab-btn__label">Profesor</span>
-              </button>
-              <button
-                type="button"
-                className="tab-btn tab-btn--active"
-                onClick={() => handleSelectTab('openings')}
-              >
-                <span className="tab-btn__icon">📖</span>
-                <span className="tab-btn__label">Aprender Aperturas</span>
-              </button>
-              <button
-                type="button"
-                className="tab-btn"
-                onClick={() => handleSelectTab('lab')}
-              >
-                <span className="tab-btn__icon">🧪</span>
-                <span className="tab-btn__label">Laboratorio</span>
-                {personalMistakes.some((m) => !m.mastered) && <span className="tab-dot" />}
-              </button>
-              <button
-                type="button"
-                className="tab-btn"
-                onClick={() => handleSelectTab('analysis')}
-              >
-                <span className="tab-btn__icon">⚙</span>
-                <span className="tab-btn__label">Motor</span>
-              </button>
-              <button
-                type="button"
-                className="tab-btn"
-                onClick={() => handleSelectTab('report')}
-              >
-                <span className="tab-btn__icon">📊</span>
-                <span className="tab-btn__label">Informe</span>
-                {postGameReport && <span className="tab-dot" />}
-              </button>
-              <button
-                type="button"
-                className="tab-btn"
-                onClick={() => handleSelectTab('profile')}
-              >
-                <span className="tab-btn__icon">👤</span>
-                <span className="tab-btn__label">Perfil</span>
-                {playerStats.totalGames > 0 && (
-                  <span className="tab-count-badge">{playerStats.totalGames}</span>
-                )}
-              </button>
-              <button
-                type="button"
-                className="tab-btn"
-                onClick={() => handleSelectTab('settings')}
-              >
-                <span className="tab-btn__icon">🎚</span>
-                <span className="tab-btn__label">Modos y Bots</span>
-              </button>
-            </nav>
-          </div>
           <OpeningsAcademyView />
         </main>
       ) : (
